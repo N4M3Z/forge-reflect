@@ -1,0 +1,6 @@
+{
+  "name": "session-reflect",
+  "version": "0.1.0",
+  "description": "Enforces session reflection before compaction or exit. Blocks stop if substantial session has no memory writes. Injects reflection prompt before context compaction.",
+  "author": { "name": "N4M3Z" }
+}

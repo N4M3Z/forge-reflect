@@ -1,0 +1,16 @@
+[package]
+name = "session-reflect"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "session-reflect"
+path = "src/bin/session-reflect.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+strip = true
+lto = true
