@@ -21,7 +21,8 @@ struct HookInput {
     trigger: Option<String>,
 }
 
-const SUBSTANCE_THRESHOLD: usize = 4;
+const TOOL_TURN_THRESHOLD: usize = 10;
+const USER_MSG_THRESHOLD: usize = 4;
 
 const FALLBACK_REASON: &str =
     "Substantial session with no learnings captured. Create a file in Memory/Learnings/ or Memory/Decisions/ before ending.";
@@ -65,7 +66,7 @@ fn main() -> ExitCode {
         // Check transcript if available — skip prompt if memory already written
         if !input.transcript_path.is_empty() {
             if let Ok(transcript) = fs::read_to_string(&input.transcript_path) {
-                let (_, has_memory_write) = analyze_transcript(&transcript);
+                let (_, _, has_memory_write) = analyze_transcript(&transcript);
                 if has_memory_write {
                     return ExitCode::SUCCESS;
                 }
@@ -86,10 +87,10 @@ fn main() -> ExitCode {
         Err(_) => return ExitCode::SUCCESS,
     };
 
-    let (tool_using_turns, has_memory_write) = analyze_transcript(&transcript);
+    let (user_messages, tool_using_turns, has_memory_write) = analyze_transcript(&transcript);
 
-    // Not substantial → allow stop
-    if tool_using_turns < SUBSTANCE_THRESHOLD {
+    // Not substantial → allow stop (both thresholds must be met)
+    if user_messages < USER_MSG_THRESHOLD || tool_using_turns < TOOL_TURN_THRESHOLD {
         return ExitCode::SUCCESS;
     }
 
@@ -110,8 +111,9 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// Analyze transcript for tool-using turns and memory writes.
-fn analyze_transcript(transcript: &str) -> (usize, bool) {
+/// Analyze transcript for user messages, tool-using turns, and memory writes.
+fn analyze_transcript(transcript: &str) -> (usize, usize, bool) {
+    let mut user_messages: usize = 0;
     let mut tool_using_turns: usize = 0;
     let mut has_memory_write = false;
 
@@ -121,8 +123,14 @@ fn analyze_transcript(transcript: &str) -> (usize, bool) {
             Err(_) => continue,
         };
 
-        let is_assistant = entry.get("type").and_then(|v| v.as_str()) == Some("assistant");
-        if !is_assistant {
+        let entry_type = entry.get("type").and_then(|v| v.as_str()).unwrap_or("");
+
+        if entry_type == "human" {
+            user_messages += 1;
+            continue;
+        }
+
+        if entry_type != "assistant" {
             continue;
         }
 
@@ -172,7 +180,7 @@ fn analyze_transcript(transcript: &str) -> (usize, bool) {
         }
     }
 
-    (tool_using_turns, has_memory_write)
+    (user_messages, tool_using_turns, has_memory_write)
 }
 
 /// Load the reflection prompt from the Pattern file, stripping frontmatter and H1.
