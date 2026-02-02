@@ -1,0 +1,8 @@
+{
+  "memory_decisions_path": "Vaults/Personal/Orchestration/Memory/Decisions",
+  "memory_learnings_path": "Vaults/Personal/Orchestration/Memory/Learnings",
+  "memory_ideas_path": "Vaults/Personal/Orchestration/Memory/Ideas",
+  "journal_daily_path": "Vaults/Personal/Resources/Journals/Daily/YYYY/MM/YYYY-MM-DD.md",
+  "backlog_path": "Vaults/Personal/Orchestration/Backlog.md",
+  "safe_read_command": "Plugins/context-tlp/bin/safe-read"
+}
