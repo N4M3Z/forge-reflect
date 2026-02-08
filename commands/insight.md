@@ -11,10 +11,16 @@ Manual equivalent of the insight Stop hook. Scans the current conversation for `
 
 ### Step 1: Load config
 
+First, resolve the module root (handles both standalone and forge-core module paths):
+```bash
+MODULE="${CLAUDE_PLUGIN_ROOT}/modules/forge-reflect"
+[ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT}"
+```
+
 Read the config file to get the learnings path:
 
 ```bash
-cat ${CLAUDE_PLUGIN_ROOT}/config.yaml
+cat $MODULE/config.yaml
 ```
 
 ### Step 2: Scan conversation for insight blocks

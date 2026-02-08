@@ -15,10 +15,16 @@ Follow these phases IN ORDER. Every phase that needs user input MUST use AskUser
 
 #### Step 1.1: Load config
 
+First, resolve the module root (handles both standalone and forge-core module paths):
+```bash
+MODULE="${CLAUDE_PLUGIN_ROOT}/modules/forge-reflect"
+[ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT}"
+```
+
 Read the config file to get configurable paths:
 
 ```bash
-cat ${CLAUDE_PLUGIN_ROOT}/config.yaml
+cat $MODULE/config.yaml
 ```
 
 Store the values:
