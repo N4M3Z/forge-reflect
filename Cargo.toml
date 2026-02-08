@@ -1,15 +1,40 @@
 [package]
 name = "session-reflect"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
+[lib]
+name = "session_reflect"
+path = "src/lib.rs"
+
 [[bin]]
-name = "session-reflect"
-path = "src/bin/session-reflect.rs"
+name = "insight"
+path = "src/bin/insight.rs"
+
+[[bin]]
+name = "reflect"
+path = "src/bin/reflect.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_yaml = "0.9"
+
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
 
 [profile.release]
 strip = true

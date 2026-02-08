@@ -1,4 +1,5 @@
 ---
+name: reflect
 description: Interactive session reflection — capture decisions, learnings, ideas, and effort logs from the current session.
 ---
 
@@ -17,7 +18,7 @@ Follow these phases IN ORDER. Every phase that needs user input MUST use AskUser
 Read the config file to get configurable paths:
 
 ```bash
-cat ${CLAUDE_PLUGIN_ROOT}/config.json
+cat ${CLAUDE_PLUGIN_ROOT}/config.yaml
 ```
 
 Store the values:

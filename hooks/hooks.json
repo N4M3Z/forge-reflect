@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-reflect-wrapper.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/reflect-wrapper.sh"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-reflect-wrapper.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/stop-wrapper.sh"
           }
         ]
       }
