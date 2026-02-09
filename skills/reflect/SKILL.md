@@ -202,3 +202,6 @@ Show the user a complete list of:
 #### Step 6.2: Confirm session can end
 
 Tell the user: "Reflection complete. You can end the session now, or continue working."
+
+!`"${CLAUDE_PLUGIN_ROOT}/hooks/skill-load.sh" 2>/dev/null`
+!`"${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect/hooks/skill-load.sh" 2>/dev/null`

@@ -1,8 +1,22 @@
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 
-# User config override (defaults.yaml is the checked-in default)
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# User config override (gitignored — user creates to configure)
 config.yaml
+
+# User inline overrides (created by user, not committed)
+User.md
+skills/*/User.md
 
 # Claude Code
 .claude/

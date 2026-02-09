@@ -46,3 +46,6 @@ If uncaptured insights exist:
 - List each uncaptured insight with its topic and key content
 - For each, propose a learning file title and ask: "Want me to capture these now?"
 - If the user confirms, create the learning files following the Learning schema from CLAUDE.md
+
+!`"${CLAUDE_PLUGIN_ROOT}/hooks/skill-load.sh" 2>/dev/null`
+!`"${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect/hooks/skill-load.sh" 2>/dev/null`
