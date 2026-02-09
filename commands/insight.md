@@ -13,7 +13,7 @@ Manual equivalent of the insight Stop hook. Scans the current conversation for `
 
 First, resolve the module root (handles both standalone and forge-core module paths):
 ```bash
-MODULE="${CLAUDE_PLUGIN_ROOT}/modules/forge-reflect"
+MODULE="${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect"
 [ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT}"
 ```
 

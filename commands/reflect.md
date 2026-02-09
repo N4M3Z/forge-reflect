@@ -17,7 +17,7 @@ Follow these phases IN ORDER. Every phase that needs user input MUST use AskUser
 
 First, resolve the module root (handles both standalone and forge-core module paths):
 ```bash
-MODULE="${CLAUDE_PLUGIN_ROOT}/modules/forge-reflect"
+MODULE="${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect"
 [ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT}"
 ```
 
