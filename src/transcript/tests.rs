@@ -52,24 +52,24 @@ fn test_counts_insight_markers() {
 
     let analysis = analyze_transcript(&transcript, &cfg());
     assert_eq!(analysis.insight_count, 2);
-    assert_eq!(analysis.learnings_write_count, 0);
+    assert_eq!(analysis.insights_write_count, 0);
     assert_eq!(analysis.user_messages, 2);
 }
 
 #[test]
-fn test_insight_with_matching_learning() {
+fn test_insight_with_matching_insight_file() {
     let transcript = [
         make_human(),
         make_assistant_text("\u{2605} Insight \u{2500}\nKey finding\n\u{2500}"),
         make_assistant_write(
-            "/Users/test/Data/Vaults/Personal/Orchestration/Memory/Learnings/Key Finding.md",
+            "/Users/test/Data/Vaults/Personal/Orchestration/Memory/Insights/Key Finding.md",
         ),
     ]
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
     assert_eq!(analysis.insight_count, 1);
-    assert_eq!(analysis.learnings_write_count, 1);
+    assert_eq!(analysis.insights_write_count, 1);
     assert!(analysis.has_memory_write);
 }
 
@@ -83,23 +83,23 @@ fn test_no_insights_no_block() {
 
     let analysis = analyze_transcript(&transcript, &cfg());
     assert_eq!(analysis.insight_count, 0);
-    assert_eq!(analysis.learnings_write_count, 0);
+    assert_eq!(analysis.insights_write_count, 0);
 }
 
 // ─── Memory write classification ───
 
 #[test]
-fn test_decisions_count_as_memory_not_learnings() {
+fn test_imperatives_count_as_memory_not_insights() {
     let transcript = [
         make_human(),
         make_assistant_write(
-            "/Users/test/Data/Vaults/Personal/Orchestration/Memory/Decisions/Some Decision.md",
+            "/Users/test/Data/Vaults/Personal/Orchestration/Memory/Imperatives/Some Imperative.md",
         ),
     ]
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
-    assert_eq!(analysis.learnings_write_count, 0);
+    assert_eq!(analysis.insights_write_count, 0);
     assert!(analysis.has_memory_write);
 }
 

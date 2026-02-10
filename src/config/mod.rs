@@ -11,7 +11,7 @@ pub struct Config {
     // Transcript analysis
     pub insight_marker: String,
     /// Path fragments for substring matching in transcript `tool_use` entries.
-    /// First element is the learnings path (used for insight counting).
+    /// First element is the insights path (used for insight counting).
     pub memory_paths: Vec<String>,
 
     // Substantiality thresholds
@@ -33,8 +33,10 @@ pub struct Config {
     // Skill-facing paths — full vault-relative paths for /reflect and /insight skills.
     // Not used by Rust binaries; present so config.yaml is a single source of truth
     // for both Rust hooks and skill prompts.
-    pub memory_decisions_path: String,
-    pub memory_learnings_path: String,
+    #[serde(alias = "memory_decisions_path")]
+    pub memory_imperatives_path: String,
+    #[serde(alias = "memory_learnings_path")]
+    pub memory_insights_path: String,
     pub memory_ideas_path: String,
     pub journal_daily_path: String,
     pub backlog_path: String,
@@ -46,8 +48,8 @@ impl Default for Config {
         Self {
             insight_marker: "\u{2605} Insight".to_string(),
             memory_paths: vec![
-                "Memory/Learnings/".to_string(),
-                "Memory/Decisions/".to_string(),
+                "Memory/Insights/".to_string(),
+                "Memory/Imperatives/".to_string(),
             ],
             tool_turn_threshold: 10,
             user_msg_threshold: 4,
@@ -55,18 +57,18 @@ impl Default for Config {
                 .to_string(),
             insight_pattern: "Vaults/Personal/Orchestration/Patterns/Insight Check.md".to_string(),
             data_dir_suffix: "Data".to_string(),
-            fallback_reason: "Substantial session with no learnings captured. Create a file in \
-                Memory/Learnings/ or Memory/Decisions/ before ending."
+            fallback_reason: "Substantial session with no insights captured. Create a file in \
+                Memory/Insights/ or Memory/Imperatives/ before ending."
                 .to_string(),
             precompact_prefix:
-                "BEFORE COMPACTING \u{2014} capture session learnings and decisions now. "
+                "BEFORE COMPACTING \u{2014} capture session insights and imperatives now. "
                     .to_string(),
             uncaptured_insight_reason:
                 "Uncaptured insights detected. Rule 12: every \u{2605} Insight block \
-                MUST be persisted as a Memory/Learnings/ file before ending."
+                MUST be persisted as a Memory/Insights/ file before ending."
                     .to_string(),
-            memory_decisions_path: "Vaults/Personal/Orchestration/Memory/Decisions".to_string(),
-            memory_learnings_path: "Vaults/Personal/Orchestration/Memory/Learnings".to_string(),
+            memory_imperatives_path: "Vaults/Personal/Orchestration/Memory/Imperatives".to_string(),
+            memory_insights_path: "Vaults/Personal/Orchestration/Memory/Insights".to_string(),
             memory_ideas_path: "Vaults/Personal/Orchestration/Memory/Ideas".to_string(),
             journal_daily_path: "Vaults/Personal/Resources/Journals/Daily/YYYY/MM/YYYY-MM-DD.md"
                 .to_string(),
@@ -77,12 +79,12 @@ impl Default for Config {
 }
 
 impl Config {
-    /// Learnings path fragment, derived from first element of `memory_paths`.
-    /// Used for counting learning file writes in transcript analysis.
-    pub fn learnings_path(&self) -> &str {
+    /// Insights path fragment, derived from first element of `memory_paths`.
+    /// Used for counting insight file writes in transcript analysis.
+    pub fn insights_path(&self) -> &str {
         self.memory_paths
             .first()
-            .map_or("Memory/Learnings/", |s| s.as_str())
+            .map_or("Memory/Insights/", |s| s.as_str())
     }
 
     /// Load config from `$CLAUDE_PLUGIN_ROOT/config.yaml`.

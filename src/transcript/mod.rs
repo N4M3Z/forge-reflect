@@ -5,7 +5,7 @@ pub struct TranscriptAnalysis {
     pub tool_using_turns: usize,
     pub has_memory_write: bool,
     pub insight_count: usize,
-    pub learnings_write_count: usize,
+    pub insights_write_count: usize,
 }
 
 /// Analyze transcript for user messages, tool-using turns, memory writes, and insights.
@@ -15,7 +15,7 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
         tool_using_turns: 0,
         has_memory_write: false,
         insight_count: 0,
-        learnings_write_count: 0,
+        insights_write_count: 0,
     };
 
     for line in transcript.lines() {
@@ -76,8 +76,8 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
                 .and_then(|p| p.as_str())
                 .unwrap_or("");
 
-            if file_path.contains(config.learnings_path()) {
-                analysis.learnings_write_count += 1;
+            if file_path.contains(config.insights_path()) {
+                analysis.insights_write_count += 1;
             }
 
             for memory_path in &config.memory_paths {

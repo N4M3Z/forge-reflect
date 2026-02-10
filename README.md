@@ -1,6 +1,6 @@
 # forge-reflect
 
-Enforces session reflection before compaction or exit. When a session has substantial work (10+ tool-using turns, 4+ user messages) but no memory writes to `Memory/Learnings/` or `Memory/Decisions/`, the module:
+Enforces session reflection before compaction or exit. When a session has substantial work (10+ tool-using turns, 4+ user messages) but no memory writes to `Memory/Insights/` or `Memory/Imperatives/`, the module:
 
 - **Stop hook**: Blocks session exit and prompts for reflection
 - **PreCompact hook**: Injects a reflection prompt before context compaction
@@ -68,7 +68,7 @@ All values have compiled defaults — `config.yaml` is optional, gitignored, and
 |---------|---------|-------------|
 | `tool_turn_threshold` | 10 | Minimum tool-using turns to consider a session substantial |
 | `user_msg_threshold` | 4 | Minimum user messages for substantiality |
-| `memory_paths` | `Memory/Learnings/`, `Memory/Decisions/` | Paths that count as memory writes |
+| `memory_paths` | `Memory/Insights/`, `Memory/Imperatives/` | Paths that count as memory writes |
 | `insight_marker` | `★ Insight` | Marker to detect insight blocks |
 
 The reflection prompt is loaded from `Vaults/Personal/Orchestration/Patterns/Session Reflect.md` (relative to `cwd`). Falls back to a built-in message if the file doesn't exist.

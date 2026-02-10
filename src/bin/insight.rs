@@ -36,25 +36,25 @@ fn main() -> ExitCode {
 
     let analysis = transcript::analyze_transcript(&transcript, &config);
 
-    // Count-based heuristic: compares insight blocks output vs learning files written.
-    // Known limitation: matches by count, not content. A session that writes 2 learnings
-    // about unrelated topics and outputs 2 insight blocks will pass even if the insights
-    // and learnings don't correspond. Acceptable for a human-in-the-loop guardrail.
+    // Count-based heuristic: compares insight blocks output vs Insight files written.
+    // Known limitation: matches by count, not content. A session that writes 2 insight
+    // files about unrelated topics and outputs 2 insight blocks will pass even if they
+    // don't correspond. Acceptable for a human-in-the-loop guardrail.
     let uncaptured = analysis
         .insight_count
-        .saturating_sub(analysis.learnings_write_count);
+        .saturating_sub(analysis.insights_write_count);
 
     if uncaptured > 0 {
         eprintln!(
-            "forge-reflect[insight]: blocking — {} insight(s), {} learning(s) written",
-            analysis.insight_count, analysis.learnings_write_count
+            "forge-reflect[insight]: blocking — {} insight(s), {} Insight file(s) written",
+            analysis.insight_count, analysis.insights_write_count
         );
         let base_reason = prompt::load_pattern(&input.cwd, &config.insight_pattern)
             .unwrap_or_else(|| config.uncaptured_insight_reason.clone());
 
         let reason = format!(
-            "{base_reason} ({} insight(s) found, {} Learning file(s) written)",
-            analysis.insight_count, analysis.learnings_write_count
+            "{base_reason} ({} insight(s) found, {} Insight file(s) written)",
+            analysis.insight_count, analysis.insights_write_count
         );
         let output = serde_json::json!({
             "decision": "block",

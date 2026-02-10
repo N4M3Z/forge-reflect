@@ -1,11 +1,11 @@
 ---
 name: SessionReflect
-description: Interactive session reflection — capture decisions, learnings, ideas, and effort logs from the current session.
+description: Interactive session reflection — capture decisions, insights, ideas, and effort logs from the current session.
 ---
 
 # Session Reflect
 
-Interactive end-of-session (or mid-session) reflection. Reviews what happened in the conversation, proposes decisions/learnings/ideas to capture, asks the user to confirm or adjust, writes memory files, and logs effort to the daily journal.
+Interactive end-of-session (or mid-session) reflection. Reviews what happened in the conversation, proposes imperatives/insights/ideas to capture, asks the user to confirm or adjust, writes memory files, and logs effort to the daily journal.
 
 ## Instructions
 
@@ -28,8 +28,8 @@ cat $MODULE/config.yaml
 ```
 
 Store the values:
-- `memory_decisions_path` — directory for decision files
-- `memory_learnings_path` — directory for learning files
+- `memory_imperatives_path` — directory for imperative files
+- `memory_insights_path` — directory for insight files
 - `memory_ideas_path` — directory for idea files
 - `journal_daily_path` — daily journal path pattern (YYYY/MM/YYYY-MM-DD.md)
 - `backlog_path` — persistent backlog file
@@ -41,8 +41,8 @@ Store the values:
 
 Look back through the current conversation and identify:
 
-1. **Decisions made** — choices about architecture, approach, tooling, process
-2. **Learnings discovered** — factual findings, gotchas, patterns, things that worked or didn't
+1. **Imperatives identified** — choices about architecture, approach, tooling, process
+2. **Insights discovered** — factual findings, gotchas, patterns, things that worked or didn't
 3. **Ideas surfaced** — future possibilities mentioned but not acted on
 4. **Substantial work done** — anything worth an effort log entry
 5. **Backlog items** — new tasks, follow-ups, or items to track
@@ -51,31 +51,31 @@ Look back through the current conversation and identify:
 #### Step 2.2: Draft proposals
 
 For each item identified, draft:
-- **Decisions**: title, context, decision, rationale
-- **Learnings**: title, origin, insight, actionable rule
+- **Imperatives**: title, context, decision, rationale
+- **Insights**: title, origin, insight, actionable rule
 - **Ideas**: title, spark, idea description
 - **Effort entries**: project, duration tag, description
 - **Backlog items**: description, priority
 
 ### Phase 3: Interactive Review
 
-#### Step 3.1: Present decisions
+#### Step 3.1: Present imperatives
 
-If any decisions were identified, present them to the user via AskUserQuestion:
+If any imperatives were identified, present them to the user via AskUserQuestion:
 
-For each proposed decision (up to 4 per batch):
+For each proposed imperative (up to 4 per batch):
 - Show the proposed title and one-line summary
-- **Options**: "Capture it", "Adjust — let me refine", "Skip — not a decision"
+- **Options**: "Capture it", "Adjust — let me refine", "Skip — not an imperative"
 
 For any the user wants to adjust, ask follow-up questions:
 - "What would you change about the title or rationale?"
-- "Is the status Active or should it supersede an existing decision?"
+- "Is the status Active or should it supersede an existing imperative?"
 
-#### Step 3.2: Present learnings
+#### Step 3.2: Present insights
 
-If any learnings were identified, present them the same way:
+If any insights were identified, present them the same way:
 
-For each proposed learning (up to 4 per batch):
+For each proposed insight (up to 4 per batch):
 - Show the proposed title and insight
 - **Options**: "Capture it", "Adjust — let me refine", "Skip — already known"
 
@@ -108,9 +108,9 @@ For each proposed item (up to 4 per batch):
 
 ### Phase 4: Write Memory Files
 
-#### Step 4.1: Create decision files
+#### Step 4.1: Create imperative files
 
-For each confirmed decision, create a file at `<memory_decisions_path>/YYYY-MM-DD — Title.md` using the Decision schema from CLAUDE.md:
+For each confirmed imperative, create a file at `<memory_imperatives_path>/YYYY-MM-DD — Title.md` using the Imperative schema from CLAUDE.md:
 
 ```yaml
 title: Short descriptive title
@@ -118,7 +118,7 @@ aliases: []
 tags:
 keywords:
   - "[[Topic]]"
-context: What prompted this decision
+context: What prompted this imperative
 decision: What was decided
 rationale: Why this approach was chosen
 status: Active
@@ -129,9 +129,9 @@ updated: YYYY-MM-DD
 
 Body = expanded detail where frontmatter fields are too brief.
 
-#### Step 4.2: Create learning files
+#### Step 4.2: Create insight files
 
-For each confirmed learning, create a file at `<memory_learnings_path>/YYYY-MM-DD — Title.md` using the Learning schema:
+For each confirmed insight, create a file at `<memory_insights_path>/YYYY-MM-DD — Title.md` using the Insight schema:
 
 ```yaml
 title: Short descriptive title
@@ -180,7 +180,7 @@ Follow the journal style:
 - Notes as plain text children
 - Wikilink liberally — people, projects, organizations, topics
 
-For learnings: dual-write by adding a log entry that wikilinks to the learning file (full filename with date prefix).
+For insights: dual-write by adding a log entry that wikilinks to the insight file (full filename with date prefix).
 
 #### Step 5.2: Update backlog
 
@@ -193,8 +193,8 @@ For each confirmed backlog item, read the backlog via `safe_read_command` and ad
 #### Step 6.1: Present what was captured
 
 Show the user a complete list of:
-- Decision files created (with full filenames)
-- Learning files created (with full filenames)
+- Imperative files created (with full filenames)
+- Insight files created (with full filenames)
 - Idea files created (with full filenames)
 - Effort entries logged
 - Backlog items added

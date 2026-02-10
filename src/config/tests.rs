@@ -17,7 +17,7 @@ fn test_partial_yaml_uses_defaults_for_missing() {
     assert_eq!(config.tool_turn_threshold, 20);
     // Missing fields get defaults
     assert_eq!(config.user_msg_threshold, 4);
-    assert_eq!(config.learnings_path(), "Memory/Learnings/");
+    assert_eq!(config.insights_path(), "Memory/Insights/");
 }
 
 #[test]
