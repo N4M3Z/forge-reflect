@@ -99,6 +99,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "forge-reflect"
+version = "0.2.0"
+dependencies = [
+ "assert_cmd",
+ "predicates",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -327,18 +339,6 @@ dependencies = [
  "ryu",
  "serde",
  "unsafe-libyaml",
-]
-
-[[package]]
-name = "session-reflect"
-version = "0.2.0"
-dependencies = [
- "assert_cmd",
- "predicates",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
 ]
 
 [[package]]

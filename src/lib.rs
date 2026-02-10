@@ -26,13 +26,13 @@ pub struct HookInput {
 pub fn read_hook_input() -> Option<HookInput> {
     let mut buf = String::new();
     if let Err(e) = std::io::stdin().read_to_string(&mut buf) {
-        eprintln!("session-reflect: failed to read stdin: {e}");
+        eprintln!("forge-reflect: failed to read stdin: {e}");
         return None;
     }
     match serde_json::from_str(&buf) {
         Ok(input) => Some(input),
         Err(e) => {
-            eprintln!("session-reflect: failed to parse hook input JSON: {e}");
+            eprintln!("forge-reflect: failed to parse hook input JSON: {e}");
             None
         }
     }
@@ -44,7 +44,7 @@ pub fn read_hook_input() -> Option<HookInput> {
 pub fn in_data_dir(cwd: &str, config: &config::Config) -> bool {
     let home = std::env::var("HOME").unwrap_or_default();
     if home.is_empty() {
-        eprintln!("session-reflect: HOME not set, cannot determine data dir scope");
+        eprintln!("forge-reflect: HOME not set, cannot determine data dir scope");
         return false;
     }
     let prefix = format!("{home}/{}", config.data_dir_suffix);

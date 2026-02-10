@@ -1,10 +1,10 @@
 [package]
-name = "session-reflect"
+name = "forge-reflect"
 version = "0.2.0"
 edition = "2021"
 
 [lib]
-name = "session_reflect"
+name = "forge_reflect"
 path = "src/lib.rs"
 
 [[bin]]

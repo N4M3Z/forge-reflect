@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::fs;
 use std::path::Path;
 
-/// All configurable values for session-reflect. Loaded from `config.yaml`
+/// All configurable values for forge-reflect. Loaded from `config.yaml`
 /// in the plugin root directory. Falls back to compiled defaults if the
 /// file is missing or unreadable.
 #[derive(Debug, Deserialize)]
@@ -30,9 +30,9 @@ pub struct Config {
     pub precompact_prefix: String,
     pub uncaptured_insight_reason: String,
 
-    // Command-facing paths — full vault-relative paths for /reflect and /insight commands.
+    // Skill-facing paths — full vault-relative paths for /reflect and /insight skills.
     // Not used by Rust binaries; present so config.yaml is a single source of truth
-    // for both Rust hooks and command prompts.
+    // for both Rust hooks and skill prompts.
     pub memory_decisions_path: String,
     pub memory_learnings_path: String,
     pub memory_ideas_path: String,
@@ -71,7 +71,7 @@ impl Default for Config {
             journal_daily_path: "Vaults/Personal/Resources/Journals/Daily/YYYY/MM/YYYY-MM-DD.md"
                 .to_string(),
             backlog_path: "Vaults/Personal/Orchestration/Backlog.md".to_string(),
-            safe_read_command: "Plugins/context-tlp/bin/safe-read".to_string(),
+            safe_read_command: "Modules/forge-tlp/bin/safe-read".to_string(),
         }
     }
 }
@@ -90,14 +90,14 @@ impl Config {
     /// All fallback paths are logged to stderr for debugging.
     pub fn load() -> Self {
         let Some(root) = std::env::var("CLAUDE_PLUGIN_ROOT").ok() else {
-            eprintln!("session-reflect: CLAUDE_PLUGIN_ROOT not set, using defaults");
+            eprintln!("forge-reflect: CLAUDE_PLUGIN_ROOT not set, using defaults");
             return Self::default();
         };
 
         let path = Path::new(&root).join("config.yaml");
         let Ok(content) = fs::read_to_string(&path) else {
             eprintln!(
-                "session-reflect: config unreadable at {}, using defaults",
+                "forge-reflect: config unreadable at {}, using defaults",
                 path.display()
             );
             return Self::default();
@@ -106,7 +106,7 @@ impl Config {
         match serde_yaml::from_str(&content) {
             Ok(config) => config,
             Err(e) => {
-                eprintln!("session-reflect: config parse error: {e}, using defaults");
+                eprintln!("forge-reflect: config parse error: {e}, using defaults");
                 Self::default()
             }
         }

@@ -1,6 +1,6 @@
-use session_reflect::config::Config;
-use session_reflect::prompt;
-use session_reflect::transcript;
+use forge_reflect::config::Config;
+use forge_reflect::prompt;
+use forge_reflect::transcript;
 use std::fs;
 use std::process::ExitCode;
 
@@ -9,18 +9,18 @@ use std::process::ExitCode;
 fn main() -> ExitCode {
     let config = Config::load();
 
-    let Some(input) = session_reflect::read_hook_input() else {
+    let Some(input) = forge_reflect::read_hook_input() else {
         return ExitCode::SUCCESS;
     };
 
     if input.stop_hook_active {
-        eprintln!("session-reflect[insight]: stop_hook_active, deferring");
+        eprintln!("forge-reflect[insight]: stop_hook_active, deferring");
         return ExitCode::SUCCESS;
     }
 
-    if !session_reflect::in_data_dir(&input.cwd, &config) {
+    if !forge_reflect::in_data_dir(&input.cwd, &config) {
         eprintln!(
-            "session-reflect[insight]: cwd '{}' outside data dir, skipping",
+            "forge-reflect[insight]: cwd '{}' outside data dir, skipping",
             input.cwd
         );
         return ExitCode::SUCCESS;
@@ -28,7 +28,7 @@ fn main() -> ExitCode {
 
     let Ok(transcript) = fs::read_to_string(&input.transcript_path) else {
         eprintln!(
-            "session-reflect[insight]: transcript unreadable at '{}', skipping",
+            "forge-reflect[insight]: transcript unreadable at '{}', skipping",
             input.transcript_path
         );
         return ExitCode::SUCCESS;
@@ -46,7 +46,7 @@ fn main() -> ExitCode {
 
     if uncaptured > 0 {
         eprintln!(
-            "session-reflect[insight]: blocking — {} insight(s), {} learning(s) written",
+            "forge-reflect[insight]: blocking — {} insight(s), {} learning(s) written",
             analysis.insight_count, analysis.learnings_write_count
         );
         let base_reason = prompt::load_pattern(&input.cwd, &config.insight_pattern)

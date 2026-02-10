@@ -1,5 +1,5 @@
 ---
-name: insight
+name: InsightCheck
 description: Check for uncaptured insights — find ★ Insight blocks in this session that were not persisted as Memory/Learnings/ files.
 ---
 

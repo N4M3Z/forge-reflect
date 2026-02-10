@@ -1,5 +1,5 @@
 ---
-name: reflect
+name: SessionReflect
 description: Interactive session reflection — capture decisions, learnings, ideas, and effort logs from the current session.
 ---
 

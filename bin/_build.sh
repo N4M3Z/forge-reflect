@@ -21,7 +21,7 @@ ensure_built() {
   fi
 
   if [ -z "$CARGO" ]; then
-    echo "session-reflect: cargo not found — install Rust: https://rustup.rs" >&2
+    echo "forge-reflect: cargo not found — install Rust: https://rustup.rs" >&2
     return 1
   fi
 

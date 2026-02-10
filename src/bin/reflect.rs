@@ -1,6 +1,6 @@
-use session_reflect::config::Config;
-use session_reflect::prompt;
-use session_reflect::transcript;
+use forge_reflect::config::Config;
+use forge_reflect::prompt;
+use forge_reflect::transcript;
 use std::fs;
 use std::process::ExitCode;
 
@@ -9,7 +9,7 @@ use std::process::ExitCode;
 fn main() -> ExitCode {
     let config = Config::load();
 
-    let Some(input) = session_reflect::read_hook_input() else {
+    let Some(input) = forge_reflect::read_hook_input() else {
         return ExitCode::SUCCESS;
     };
 
@@ -28,13 +28,13 @@ fn main() -> ExitCode {
 
     // Stop hook guards
     if input.stop_hook_active {
-        eprintln!("session-reflect[reflect]: stop_hook_active, deferring");
+        eprintln!("forge-reflect[reflect]: stop_hook_active, deferring");
         return ExitCode::SUCCESS;
     }
 
-    if !session_reflect::in_data_dir(&input.cwd, &config) {
+    if !forge_reflect::in_data_dir(&input.cwd, &config) {
         eprintln!(
-            "session-reflect[reflect]: cwd '{}' outside data dir, skipping",
+            "forge-reflect[reflect]: cwd '{}' outside data dir, skipping",
             input.cwd
         );
         return ExitCode::SUCCESS;
@@ -42,7 +42,7 @@ fn main() -> ExitCode {
 
     let Ok(transcript) = fs::read_to_string(&input.transcript_path) else {
         eprintln!(
-            "session-reflect[reflect]: transcript unreadable at '{}', skipping",
+            "forge-reflect[reflect]: transcript unreadable at '{}', skipping",
             input.transcript_path
         );
         return ExitCode::SUCCESS;
@@ -55,7 +55,7 @@ fn main() -> ExitCode {
         || analysis.tool_using_turns < config.tool_turn_threshold
     {
         eprintln!(
-            "session-reflect[reflect]: session not substantial ({} msgs, {} tool turns), allowing",
+            "forge-reflect[reflect]: session not substantial ({} msgs, {} tool turns), allowing",
             analysis.user_messages, analysis.tool_using_turns
         );
         return ExitCode::SUCCESS;
@@ -67,7 +67,7 @@ fn main() -> ExitCode {
     }
 
     // Substantial + no memory writes → block and prompt reflection
-    eprintln!("session-reflect[reflect]: blocking — substantial session with no memory writes");
+    eprintln!("forge-reflect[reflect]: blocking — substantial session with no memory writes");
     let reason = prompt::load_pattern(&input.cwd, &config.reflection_pattern)
         .unwrap_or_else(|| config.fallback_reason.clone());
 
