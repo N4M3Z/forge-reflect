@@ -1,9 +1,13 @@
 # forge-reflect
 
-Enforces session reflection before compaction or exit. When a session has substantial work (10+ tool-using turns, 4+ user messages) but no memory writes to `Memory/Insights/` or `Memory/Imperatives/`, the module:
+Enforces session reflection and memory capture conventions. When a session has substantial work (10+ tool-using turns, 4+ user messages) but no memory writes to `Memory/Insights/` or `Memory/Imperatives/`, the module:
 
 - **Stop hook**: Blocks session exit and prompts for reflection
 - **PreCompact hook**: Injects a reflection prompt before context compaction
+
+## Layer
+
+**Behaviour** — part of forge-core's three-layer architecture (Identity / Behaviour / Knowledge). Enforced via `Stop` and `PreCompact` hooks.
 
 ## Layout
 
@@ -17,8 +21,9 @@ forge-reflect/
 │   ├── pre-compact.sh                 # PreCompact hook — injects reflection
 │   └── skill-load.sh                  # DCI injector for steering + User.md
 ├── skills/
-│   ├── InsightCheck/SKILL.md          # /insight skill
-│   └── SessionReflect/SKILL.md        # /reflect skill
+│   ├── InsightCheck/SKILL.md          # /InsightCheck — detect uncaptured insights
+│   ├── SessionReflect/SKILL.md        # /SessionReflect — end-of-session reflection
+│   └── MemoryInsights/SKILL.md        # /MemoryInsights — memory capture conventions
 ├── src/                               # Rust source
 │   ├── lib.rs                         # Library crate (shared logic)
 │   ├── config/mod.rs                  # Configuration with compiled defaults
@@ -82,6 +87,14 @@ cargo build --release
 ```
 
 Binaries output to `target/release/insight` and `target/release/reflect`. Hook scripts use lazy compilation via `bin/_build.sh` — binaries are built on first invocation if missing.
+
+## Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `InsightCheck` | Detect uncaptured insights in the session — hard rule, blocks exit |
+| `SessionReflect` | End-of-session reflection prompt — soft heuristic |
+| `MemoryInsights` | Memory capture conventions — schemas for Insights, Imperatives, and Ideas files; idea lifecycle |
 
 ## User Extensions
 
