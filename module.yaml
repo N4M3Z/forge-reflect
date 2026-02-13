@@ -1,7 +1,8 @@
 name: forge-reflect
 version: 0.2.0
-description: Session reflection enforcement — blocks stop if substantial session has no memory writes, injects reflection prompt before compaction
+description: Session reflection — surface digest at start, memory capture enforcement at stop
 events:
+  - SessionStart
   - Stop
   - PreCompact
 metadata:

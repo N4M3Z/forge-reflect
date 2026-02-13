@@ -16,7 +16,8 @@ fn main() -> ExitCode {
     // PreCompact: always inject reflection prompt, regardless of directory scope.
     // This ensures compaction context includes reflection guidance everywhere.
     if input.trigger.is_some() {
-        let reason = prompt::load_pattern(&input.cwd, &config.reflection_pattern)
+        let skill_path = config.resolve_user_path(&input.cwd, &config.reflection);
+        let reason = prompt::load_pattern_abs(&skill_path)
             .unwrap_or_else(|| config.fallback_reason.clone());
 
         let output = serde_json::json!({
@@ -68,7 +69,8 @@ fn main() -> ExitCode {
 
     // Substantial + no memory writes → block and prompt reflection
     eprintln!("forge-reflect[reflect]: blocking — substantial session with no memory writes");
-    let reason = prompt::load_pattern(&input.cwd, &config.reflection_pattern)
+    let skill_path = config.resolve_user_path(&input.cwd, &config.reflection);
+    let reason = prompt::load_pattern_abs(&skill_path)
         .unwrap_or_else(|| config.fallback_reason.clone());
 
     let output = serde_json::json!({

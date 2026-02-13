@@ -49,7 +49,8 @@ fn main() -> ExitCode {
             "forge-reflect[insight]: blocking — {} insight(s), {} Insight file(s) written",
             analysis.insight_count, analysis.insights_write_count
         );
-        let base_reason = prompt::load_pattern(&input.cwd, &config.insight_pattern)
+        let skill_path = config.resolve_user_path(&input.cwd, &config.insight_check);
+        let base_reason = prompt::load_pattern_abs(&skill_path)
             .unwrap_or_else(|| config.uncaptured_insight_reason.clone());
 
         let reason = format!(

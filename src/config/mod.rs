@@ -1,10 +1,9 @@
 use serde::Deserialize;
-use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// All configurable values for forge-reflect. Loaded from `config.yaml`
-/// in the plugin root directory. Falls back to compiled defaults if the
-/// file is missing or unreadable.
+/// (or `defaults.yaml`) in the plugin root directory. Falls back to compiled
+/// defaults if the file is missing or unreadable.
 #[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -18,9 +17,9 @@ pub struct Config {
     pub tool_turn_threshold: usize,
     pub user_msg_threshold: usize,
 
-    // Pattern file paths (relative to cwd)
-    pub reflection_pattern: String,
-    pub insight_pattern: String,
+    // Skill file paths (user-root-relative)
+    pub reflection: String,
+    pub insight_check: String,
 
     // Data directory suffix for scope check
     pub data_dir_suffix: String,
@@ -30,17 +29,51 @@ pub struct Config {
     pub precompact_prefix: String,
     pub uncaptured_insight_reason: String,
 
-    // Skill-facing paths — full vault-relative paths for /reflect and /insight skills.
-    // Not used by Rust binaries; present so config.yaml is a single source of truth
-    // for both Rust hooks and skill prompts.
-    #[serde(alias = "memory_decisions_path")]
-    pub memory_imperatives_path: String,
-    #[serde(alias = "memory_learnings_path")]
-    pub memory_insights_path: String,
-    pub memory_ideas_path: String,
-    pub journal_daily_path: String,
-    pub backlog_path: String,
-    pub safe_read_command: String,
+    // Nested groups
+    pub memory: MemoryConfig,
+    pub journal: JournalConfig,
+    pub commands: CommandsConfig,
+
+    // Flat
+    pub backlog: String,
+
+    // Surfacing
+    pub surface: SurfaceConfig,
+
+    // Resolved at load time (not deserialized from YAML)
+    #[serde(skip)]
+    pub user_root: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct MemoryConfig {
+    pub imperatives: String,
+    pub insights: String,
+    pub ideas: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct JournalConfig {
+    pub daily: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct CommandsConfig {
+    pub safe_read: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct SurfaceConfig {
+    pub archive_dir: String,
+    pub archive_prefix: String,
+    pub reminders_list: String,
+    pub ideas_cutoff_days: u32,
+    pub due_soon_days: u32,
+    pub max_items: usize,
 }
 
 impl Default for Config {
@@ -53,9 +86,8 @@ impl Default for Config {
             ],
             tool_turn_threshold: 10,
             user_msg_threshold: 4,
-            reflection_pattern: "Vaults/Personal/Orchestration/Patterns/Session Reflect.md"
-                .to_string(),
-            insight_pattern: "Vaults/Personal/Orchestration/Patterns/Insight Check.md".to_string(),
+            reflection: "Orchestration/Skills/SessionReflect/SKILL.md".to_string(),
+            insight_check: "Orchestration/Skills/InsightCheck/SKILL.md".to_string(),
             data_dir_suffix: "Data".to_string(),
             fallback_reason: "Substantial session with no insights captured. Create a file in \
                 Memory/Insights/ or Memory/Imperatives/ before ending."
@@ -67,13 +99,51 @@ impl Default for Config {
                 "Uncaptured insights detected. Rule 12: every \u{2605} Insight block \
                 MUST be persisted as a Memory/Insights/ file before ending."
                     .to_string(),
-            memory_imperatives_path: "Vaults/Personal/Orchestration/Memory/Imperatives".to_string(),
-            memory_insights_path: "Vaults/Personal/Orchestration/Memory/Insights".to_string(),
-            memory_ideas_path: "Vaults/Personal/Orchestration/Memory/Ideas".to_string(),
-            journal_daily_path: "Vaults/Personal/Resources/Journals/Daily/YYYY/MM/YYYY-MM-DD.md"
-                .to_string(),
-            backlog_path: "Vaults/Personal/Orchestration/Backlog.md".to_string(),
-            safe_read_command: "Modules/forge-tlp/bin/safe-read".to_string(),
+            memory: MemoryConfig::default(),
+            journal: JournalConfig::default(),
+            commands: CommandsConfig::default(),
+            backlog: "Orchestration/Backlog.md".to_string(),
+            surface: SurfaceConfig::default(),
+            user_root: String::new(),
+        }
+    }
+}
+
+impl Default for MemoryConfig {
+    fn default() -> Self {
+        Self {
+            imperatives: "Orchestration/Memory/Imperatives".to_string(),
+            insights: "Orchestration/Memory/Insights".to_string(),
+            ideas: "Orchestration/Memory/Ideas".to_string(),
+        }
+    }
+}
+
+impl Default for JournalConfig {
+    fn default() -> Self {
+        Self {
+            daily: "Resources/Journals/Daily/YYYY/MM/YYYY-MM-DD.md".to_string(),
+        }
+    }
+}
+
+impl Default for CommandsConfig {
+    fn default() -> Self {
+        Self {
+            safe_read: "Modules/forge-tlp/bin/safe-read".to_string(),
+        }
+    }
+}
+
+impl Default for SurfaceConfig {
+    fn default() -> Self {
+        Self {
+            archive_dir: "Resources/Archives".to_string(),
+            archive_prefix: "Safari Tab Snapshot".to_string(),
+            reminders_list: "work".to_string(),
+            ideas_cutoff_days: 14,
+            due_soon_days: 3,
+            max_items: 3,
         }
     }
 }
@@ -87,31 +157,29 @@ impl Config {
             .map_or("Memory/Insights/", |s| s.as_str())
     }
 
-    /// Load config from `$CLAUDE_PLUGIN_ROOT/config.yaml`.
+    /// Load config from `$CLAUDE_PLUGIN_ROOT/{config,defaults}.yaml`.
     /// Returns defaults if the env var is unset or the file is unreadable.
-    /// All fallback paths are logged to stderr for debugging.
     pub fn load() -> Self {
         let Some(root) = std::env::var("CLAUDE_PLUGIN_ROOT").ok() else {
             eprintln!("forge-reflect: CLAUDE_PLUGIN_ROOT not set, using defaults");
             return Self::default();
         };
 
-        let path = Path::new(&root).join("config.yaml");
-        let Ok(content) = fs::read_to_string(&path) else {
-            eprintln!(
-                "forge-reflect: config unreadable at {}, using defaults",
-                path.display()
-            );
-            return Self::default();
-        };
-
-        match serde_yaml::from_str(&content) {
-            Ok(config) => config,
-            Err(e) => {
-                eprintln!("forge-reflect: config parse error: {e}, using defaults");
+        let plugin_root = Path::new(&root);
+        let mut config: Self = forge_core::yaml::load_config(plugin_root)
+            .unwrap_or_else(|e| {
+                eprintln!("forge-reflect: {e}, using defaults");
                 Self::default()
-            }
-        }
+            });
+
+        // Resolve user root from FORGE_USER_ROOT env var
+        config.user_root = forge_core::yaml::user_root("", "");
+        config
+    }
+
+    /// Resolve a user-content path against user_root (or cwd fallback).
+    pub fn resolve_user_path(&self, cwd: &str, relative: &str) -> PathBuf {
+        forge_core::yaml::resolve_path(&self.user_root, cwd, relative)
     }
 }
 

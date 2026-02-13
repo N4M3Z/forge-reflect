@@ -1,0 +1,54 @@
+# forge-reflect default configuration.
+# User-root-relative content paths. All values have compiled defaults —
+# partial overrides in config.yaml are fine.
+#
+# Override: create config.yaml (gitignored) with only the fields you want to change.
+
+# Transcript analysis
+insight_marker: "★ Insight"
+memory_paths:
+  - "Memory/Insights/"
+  - "Memory/Imperatives/"
+
+# Substantiality thresholds
+tool_turn_threshold: 10
+user_msg_threshold: 4
+
+# Skill file paths (user-root-relative)
+reflection: Orchestration/Skills/SessionReflect/SKILL.md
+insight_check: Orchestration/Skills/InsightCheck/SKILL.md
+
+# Data directory suffix for scope check
+data_dir_suffix: Data
+
+# Hook message strings
+fallback_reason: >-
+  Substantial session with no insights captured.
+  Create a file in Memory/Insights/ or Memory/Imperatives/ before ending.
+precompact_prefix: "BEFORE COMPACTING \u2014 capture session insights and imperatives now. "
+uncaptured_insight_reason: >-
+  Uncaptured insights detected. Rule 12: every ★ Insight block
+  MUST be persisted as a Memory/Insights/ file before ending.
+
+# Nested groups (user-root-relative)
+memory:
+  imperatives: Orchestration/Memory/Imperatives
+  insights: Orchestration/Memory/Insights
+  ideas: Orchestration/Memory/Ideas
+
+journal:
+  daily: Resources/Journals/Daily/YYYY/MM/YYYY-MM-DD.md
+
+commands:
+  safe_read: Modules/forge-tlp/bin/safe-read
+
+backlog: Orchestration/Backlog.md
+
+# Surfacing (SessionStart digest)
+surface:
+  archive_dir: Resources/Archives
+  archive_prefix: "Safari Tab Snapshot"
+  reminders_list: work
+  ideas_cutoff_days: 14
+  due_soon_days: 3
+  max_items: 3

@@ -76,7 +76,7 @@ All values have compiled defaults — `config.yaml` is optional, gitignored, and
 | `memory_paths` | `Memory/Insights/`, `Memory/Imperatives/` | Paths that count as memory writes |
 | `insight_marker` | `★ Insight` | Marker to detect insight blocks |
 
-The reflection prompt is loaded from `Vaults/Personal/Orchestration/Patterns/Session Reflect.md` (relative to `cwd`). Falls back to a built-in message if the file doesn't exist.
+The reflection prompt is loaded from `Orchestration/Skills/SessionReflect/SKILL.md` (user-root-relative, resolved via `FORGE_USER_ROOT`). Falls back to a built-in message if the file doesn't exist.
 
 ## Building
 

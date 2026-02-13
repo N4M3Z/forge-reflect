@@ -4,8 +4,12 @@ use std::path::Path;
 /// Load a pattern file by relative path, stripping frontmatter and H1.
 pub fn load_pattern(cwd: &str, relative_path: &str) -> Option<String> {
     let pattern_path = Path::new(cwd).join(relative_path);
+    load_pattern_abs(&pattern_path)
+}
 
-    let content = fs::read_to_string(pattern_path).ok()?;
+/// Load a pattern file by absolute path, stripping frontmatter and H1.
+pub fn load_pattern_abs(path: &Path) -> Option<String> {
+    let content = fs::read_to_string(path).ok()?;
     let stripped = strip_frontmatter_and_h1(&content);
 
     if stripped.trim().is_empty() {

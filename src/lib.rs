@@ -1,6 +1,7 @@
 // Library crate — modules are re-exported for use by binaries in src/bin/.
 pub mod config;
 pub mod prompt;
+pub mod surface;
 pub mod transcript;
 
 use serde::Deserialize;

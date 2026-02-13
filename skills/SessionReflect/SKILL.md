@@ -24,16 +24,16 @@ MODULE="${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect"
 Read the config file to get configurable paths:
 
 ```bash
-cat $MODULE/config.yaml
+cat $MODULE/defaults.yaml
 ```
 
-Store the values:
-- `memory_imperatives_path` — directory for imperative files
-- `memory_insights_path` — directory for insight files
-- `memory_ideas_path` — directory for idea files
-- `journal_daily_path` — daily journal path pattern (YYYY/MM/YYYY-MM-DD.md)
-- `backlog_path` — persistent backlog file
-- `safe_read_command` — command for reading AMBER-classified files
+Store the values (all content paths are user-root-relative, resolve via `FORGE_USER_ROOT`):
+- `memory: imperatives:` — directory for imperative files
+- `memory: insights:` — directory for insight files
+- `memory: ideas:` — directory for idea files
+- `journal: daily:` — daily journal path pattern (YYYY/MM/YYYY-MM-DD.md)
+- `backlog:` — persistent backlog file
+- `commands: safe_read:` — command for reading AMBER-classified files (project-relative)
 
 ### Phase 2: Analyze the Session
 

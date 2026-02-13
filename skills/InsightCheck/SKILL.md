@@ -20,7 +20,7 @@ MODULE="${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect"
 Read the config file to get the insights path:
 
 ```bash
-cat $MODULE/config.yaml
+cat $MODULE/defaults.yaml
 ```
 
 ### Step 2: Scan conversation for insight blocks
