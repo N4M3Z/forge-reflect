@@ -105,3 +105,35 @@ fn test_resolve_user_path_falls_back_to_cwd() {
         std::path::PathBuf::from("/home/user/data/Orchestration/Backlog.md")
     );
 }
+
+#[test]
+fn test_apply_shared_fills_defaults() {
+    let mut config = Config::default();
+    let mut project = forge_core::project::ProjectConfig::default();
+    project.backlog = "Custom/Backlog.md".to_string();
+    project.commands.safe_read = "custom/safe-read".to_string();
+    project.journal.daily = "Custom/YYYY-MM-DD.md".to_string();
+    project.memory.ideas = "Custom/Ideas".to_string();
+
+    config.apply_shared(&project);
+
+    assert_eq!(config.backlog, "Custom/Backlog.md");
+    assert_eq!(config.commands.safe_read, "custom/safe-read");
+    assert_eq!(config.journal.daily, "Custom/YYYY-MM-DD.md");
+    assert_eq!(config.memory.ideas, "Custom/Ideas");
+}
+
+#[test]
+fn test_apply_shared_preserves_module_overrides() {
+    let mut config = Config::default();
+    // Simulate a module config.yaml override
+    config.backlog = "Module/Override.md".to_string();
+
+    let mut project = forge_core::project::ProjectConfig::default();
+    project.backlog = "Custom/Backlog.md".to_string();
+
+    config.apply_shared(&project);
+
+    // Module override should win
+    assert_eq!(config.backlog, "Module/Override.md");
+}

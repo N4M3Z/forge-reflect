@@ -143,7 +143,7 @@ impl Default for SurfaceConfig {
             reminders_list: "work".to_string(),
             ideas_cutoff_days: 14,
             due_soon_days: 3,
-            max_items: 3,
+            max_items: 5,
         }
     }
 }
@@ -159,22 +159,62 @@ impl Config {
 
     /// Load config from `$CLAUDE_PLUGIN_ROOT/{config,defaults}.yaml`.
     /// Returns defaults if the env var is unset or the file is unreadable.
+    /// Always resolves user_root (via env var or forge.yaml discovery).
     pub fn load() -> Self {
-        let Some(root) = std::env::var("CLAUDE_PLUGIN_ROOT").ok() else {
-            eprintln!("forge-reflect: CLAUDE_PLUGIN_ROOT not set, using defaults");
-            return Self::default();
+        let mut config: Self = match std::env::var("CLAUDE_PLUGIN_ROOT") {
+            Ok(root) => {
+                let plugin_root = Path::new(&root);
+                forge_core::yaml::load_config(plugin_root).unwrap_or_else(|e| {
+                    eprintln!("forge-reflect: {e}, using defaults");
+                    Self::default()
+                })
+            }
+            Err(_) => {
+                eprintln!("forge-reflect: CLAUDE_PLUGIN_ROOT not set, using defaults");
+                Self::default()
+            }
         };
 
-        let plugin_root = Path::new(&root);
-        let mut config: Self = forge_core::yaml::load_config(plugin_root)
-            .unwrap_or_else(|e| {
-                eprintln!("forge-reflect: {e}, using defaults");
-                Self::default()
-            });
-
-        // Resolve user root from FORGE_USER_ROOT env var
+        // Always resolve user root — works with env var, caller args, or discovery
         config.user_root = forge_core::yaml::user_root("", "");
+
+        // Overlay project-level shared config (forge.yaml) onto compiled defaults.
+        // Module config.yaml overrides (already loaded above) take precedence.
+        let project = forge_core::project::ProjectConfig::load();
+        config.apply_shared(&project);
         config
+    }
+
+    /// Apply project-level shared values where this config still has compiled defaults.
+    fn apply_shared(&mut self, project: &forge_core::project::ProjectConfig) {
+        use forge_core::project::apply_if_default;
+        let defaults = Self::default();
+        apply_if_default(
+            &mut self.commands.safe_read,
+            &defaults.commands.safe_read,
+            &project.commands.safe_read,
+        );
+        apply_if_default(
+            &mut self.journal.daily,
+            &defaults.journal.daily,
+            &project.journal.daily,
+        );
+        apply_if_default(&mut self.backlog, &defaults.backlog, &project.backlog);
+        apply_if_default(
+            &mut self.memory.imperatives,
+            &defaults.memory.imperatives,
+            &project.memory.imperatives,
+        );
+        apply_if_default(
+            &mut self.memory.insights,
+            &defaults.memory.insights,
+            &project.memory.insights,
+        );
+        apply_if_default(
+            &mut self.memory.ideas,
+            &defaults.memory.ideas,
+            &project.memory.ideas,
+        );
     }
 
     /// Resolve a user-content path against user_root (or cwd fallback).

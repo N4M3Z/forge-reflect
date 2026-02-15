@@ -1,6 +1,6 @@
 # forge-reflect default configuration.
-# User-root-relative content paths. All values have compiled defaults —
-# partial overrides in config.yaml are fine.
+# Project-level shared paths (safe_read, journal, backlog, memory) come from
+# forge.yaml shared: section. Override here only for standalone use.
 #
 # Override: create config.yaml (gitignored) with only the fields you want to change.
 
@@ -30,18 +30,16 @@ uncaptured_insight_reason: >-
   Uncaptured insights detected. Rule 12: every ★ Insight block
   MUST be persisted as a Memory/Insights/ file before ending.
 
-# Nested groups (user-root-relative)
+# Shared paths — authoritative source is forge.yaml shared: section.
+# Kept here for standalone use and config.yaml override.
 memory:
   imperatives: Orchestration/Memory/Imperatives
   insights: Orchestration/Memory/Insights
   ideas: Orchestration/Memory/Ideas
-
 journal:
   daily: Resources/Journals/Daily/YYYY/MM/YYYY-MM-DD.md
-
 commands:
   safe_read: Modules/forge-tlp/bin/safe-read
-
 backlog: Orchestration/Backlog.md
 
 # Surfacing (SessionStart digest)
@@ -51,4 +49,4 @@ surface:
   reminders_list: work
   ideas_cutoff_days: 14
   due_soon_days: 3
-  max_items: 3
+  max_items: 5

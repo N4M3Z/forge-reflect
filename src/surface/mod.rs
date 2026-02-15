@@ -176,36 +176,91 @@ pub fn parse_ideas(
     Some(output)
 }
 
-/// Parse captured tabs archive. Returns rotating selection of markdown links.
+/// Extract titles from a captured tabs archive (markdown links).
 ///
-/// Extracts `- [Title](URL)` lines from archive content.
-/// `offset`: rotation offset (e.g. day-of-year).
-pub fn parse_captured_tabs(content: &str, max: usize, offset: usize) -> Option<String> {
+/// Returns a list of link titles from `- [Title](URL)` lines.
+pub fn extract_tab_titles(content: &str) -> Vec<String> {
     let link_re = Regex::new(r"^- \[([^\]]+)\]\(").expect("valid regex");
-    let mut links: Vec<&str> = Vec::new();
+    let mut titles = Vec::new();
 
     for line in content.lines() {
-        if link_re.is_match(line) {
-            // Extract just the title
-            if let Some(caps) = link_re.captures(line) {
-                if let Some(title) = caps.get(1) {
-                    links.push(title.as_str());
-                }
+        if let Some(caps) = link_re.captures(line) {
+            if let Some(title) = caps.get(1) {
+                titles.push(title.as_str().to_string());
             }
         }
     }
 
-    if links.is_empty() {
+    titles
+}
+
+/// Extract descriptions from open backlog tasks.
+///
+/// Parses `- [ ] description [priority:: x] [due:: y]` lines, strips metadata.
+pub fn extract_backlog_titles(content: &str) -> Vec<String> {
+    let date_re = Regex::new(r"\[due::\s*\d{4}-\d{2}-\d{2}\]").expect("valid regex");
+    let priority_re = Regex::new(r"\[priority::\s*\w+\]").expect("valid regex");
+    let mut titles = Vec::new();
+
+    for line in content.lines() {
+        if !line.starts_with("- [ ] ") {
+            continue;
+        }
+
+        let desc = line
+            .trim_start_matches("- [ ] ")
+            .replace(date_re.find(line).map_or("", |m| m.as_str()), "")
+            .replace(priority_re.find(line).map_or("", |m| m.as_str()), "")
+            .trim()
+            .to_string();
+
+        if !desc.is_empty() {
+            titles.push(desc);
+        }
+    }
+
+    titles
+}
+
+/// Format a rotating selection from a pool of items.
+///
+/// Source-agnostic: takes any list of strings and rotates based on offset.
+/// Returns None if the pool is empty.
+pub fn format_rotating_pool(items: &[String], max: usize, offset: usize) -> Option<String> {
+    if items.is_empty() {
         return None;
     }
 
-    let count = links.len();
+    let count = items.len();
+    let start = offset % count;
+    let mut output = String::from("Rediscovery:\n");
+
+    for i in 0..max.min(count) {
+        let idx = (start + i) % count;
+        output.push_str(&format!("  \u{2022} {}\n", items[idx]));
+    }
+
+    Some(output)
+}
+
+/// Parse captured tabs archive. Returns rotating selection of markdown links.
+///
+/// Extracts `- [Title](URL)` lines from archive content.
+/// `offset`: rotation offset (e.g. day-of-year).
+#[deprecated(note = "Use extract_tab_titles + format_rotating_pool instead")]
+pub fn parse_captured_tabs(content: &str, max: usize, offset: usize) -> Option<String> {
+    let titles = extract_tab_titles(content);
+    if titles.is_empty() {
+        return None;
+    }
+
+    let count = titles.len();
     let start = offset % count;
     let mut output = String::from("Captured tabs:\n");
 
     for i in 0..max.min(count) {
         let idx = (start + i) % count;
-        output.push_str(&format!("  \u{2022} {}\n", links[idx]));
+        output.push_str(&format!("  \u{2022} {}\n", titles[idx]));
     }
 
     Some(output)

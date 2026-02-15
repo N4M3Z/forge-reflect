@@ -8,4 +8,8 @@ export CLAUDE_PLUGIN_ROOT="$MODULE_ROOT"  # So _build.sh finds Cargo.toml
 source "$MODULE_ROOT/bin/_build.sh"
 ensure_built surface || exit 0
 
-exec "$BIN_DIR/surface"
+OUTPUT=$("$BIN_DIR/surface") || true
+
+if [ -n "$OUTPUT" ]; then
+  printf '%s\n' "$OUTPUT"
+fi
