@@ -159,7 +159,7 @@ impl Config {
 
     /// Load config from `$CLAUDE_PLUGIN_ROOT/{config,defaults}.yaml`.
     /// Returns defaults if the env var is unset or the file is unreadable.
-    /// Always resolves user_root (via env var or forge.yaml discovery).
+    /// Always resolves user_root (via env var or defaults.yaml discovery).
     pub fn load() -> Self {
         let mut config: Self = match std::env::var("CLAUDE_PLUGIN_ROOT") {
             Ok(root) => {
@@ -178,7 +178,7 @@ impl Config {
         // Always resolve user root — works with env var, caller args, or discovery
         config.user_root = forge_core::yaml::user_root("", "");
 
-        // Overlay project-level shared config (forge.yaml) onto compiled defaults.
+        // Overlay project-level shared config (defaults.yaml) onto compiled defaults.
         // Module config.yaml overrides (already loaded above) take precedence.
         let project = forge_core::project::ProjectConfig::load();
         config.apply_shared(&project);

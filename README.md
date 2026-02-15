@@ -88,9 +88,9 @@ All values have compiled defaults — `config.yaml` is optional, gitignored, and
 | `insight_check` | `Orchestration/Skills/InsightCheck/SKILL.md` | Insight check prompt |
 | `data_dir_suffix` | `Data` | Directory suffix for scope check |
 
-### Shared settings (from forge.yaml)
+### Shared settings (from defaults.yaml)
 
-These paths are shared with other modules. The authoritative source is `forge.yaml`'s `shared:` section (see forge-core README). They also appear in `defaults.yaml` for standalone use.
+These paths are shared with other modules. The authoritative source is `defaults.yaml`'s `shared:` section (see forge-core README). They also appear in module `defaults.yaml` for standalone use.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -107,7 +107,7 @@ These paths are shared with other modules. The authoritative source is `forge.ya
     Highest ──► 1. config.yaml           user override (gitignored)
                 │                        e.g. backlog: My/Custom/Backlog.md
                 │
-                2. forge.yaml shared:    project-level source of truth
+                2. defaults.yaml shared: project-level source of truth
                 │                        loaded via ProjectConfig::load()
                 │
                 3. defaults.yaml         module-shipped defaults
@@ -116,30 +116,30 @@ These paths are shared with other modules. The authoritative source is `forge.ya
     Lowest  ──► 4. Compiled Default      no files needed
 ```
 
-How it works: `Config::load()` deserializes `config.yaml` (or `defaults.yaml`), then calls `apply_shared()` which overlays `forge.yaml shared:` values onto any field that still equals its compiled default. A `config.yaml` override changes the value away from the compiled default, so `apply_shared()` never touches it.
+How it works: `Config::load()` deserializes `config.yaml` (or `defaults.yaml`), then calls `apply_shared()` which overlays project `defaults.yaml shared:` values onto any field that still equals its compiled default. A `config.yaml` override changes the value away from the compiled default, so `apply_shared()` never touches it.
 
 ```
 Config::load()
      │
      ├── Deserialize config.yaml or defaults.yaml
      │
-     ├── Resolve user_root (FORGE_USER_ROOT → forge.yaml → cwd)
+     ├── Resolve user_root (FORGE_USER_ROOT → defaults.yaml → cwd)
      │
      └── apply_shared(ProjectConfig)
               │
               for each shared field:
               ├── value == compiled default?
-              │     YES → replace with forge.yaml shared: value
+              │     YES → replace with defaults.yaml shared: value
               │     NO  → keep (was overridden by config.yaml)
-              └── forge.yaml value empty?
+              └── defaults.yaml value empty?
                     YES → keep compiled default
                     NO  → apply
 ```
 
 This means forge-reflect works in three contexts:
-- **Via dispatch** — env vars set, shared config loaded from forge.yaml
-- **As Claude Code plugin** — discovers forge.yaml via `CLAUDE_PROJECT_ROOT`
-- **Standalone CLI** — discovers forge.yaml from cwd, falls back to defaults.yaml
+- **Via dispatch** — env vars set, shared config loaded from defaults.yaml
+- **As Claude Code plugin** — discovers defaults.yaml via `CLAUDE_PROJECT_ROOT`
+- **Standalone CLI** — discovers defaults.yaml from cwd, falls back to module defaults.yaml
 
 ## Building
 

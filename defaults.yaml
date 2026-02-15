@@ -1,6 +1,6 @@
 # forge-reflect default configuration.
 # Project-level shared paths (safe_read, journal, backlog, memory) come from
-# forge.yaml shared: section. Override here only for standalone use.
+# defaults.yaml shared: section. Override here only for standalone use.
 #
 # Override: create config.yaml (gitignored) with only the fields you want to change.
 
@@ -30,7 +30,7 @@ uncaptured_insight_reason: >-
   Uncaptured insights detected. Rule 12: every ★ Insight block
   MUST be persisted as a Memory/Insights/ file before ending.
 
-# Shared paths — authoritative source is forge.yaml shared: section.
+# Shared paths — authoritative source is defaults.yaml shared: section.
 # Kept here for standalone use and config.yaml override.
 memory:
   imperatives: Orchestration/Memory/Imperatives

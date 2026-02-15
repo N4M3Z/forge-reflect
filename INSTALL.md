@@ -16,7 +16,7 @@ Or build individually:
 cargo build --release --manifest-path Modules/forge-reflect/Cargo.toml
 ```
 
-Ensure the module is listed in `forge.yaml` (typically last — reflection runs after all other modules):
+Ensure the module is listed in `defaults.yaml` (typically last — reflection runs after all other modules):
 
 ```yaml
 modules:
