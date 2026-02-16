@@ -49,6 +49,14 @@ commands:
   safe_write: Modules/forge-tlp/bin/safe-write
 backlog: Orchestration/Backlog.md
 
+# Memory promotion settings (user-root-relative paths)
+promote:
+  steering: Orchestration/Steering
+  skills: Orchestration/Skills
+  agents: Orchestration/Agents
+  scripts: Scratch
+  archive: Archives/Memory
+
 # Surfacing (SessionStart digest)
 surface:
   archive_dir: Resources/Archives

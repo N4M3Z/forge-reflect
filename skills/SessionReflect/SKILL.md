@@ -16,10 +16,10 @@ If AskUserQuestion is unavailable in the current runtime, emulate the same flow 
 
 #### Step 1.1: Load config
 
-First, resolve the module root (handles both standalone and forge-core module paths):
+Resolve the module root:
 ```bash
-MODULE="${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}"
-[ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT:-.}"
+MODULE="Modules/forge-reflect"
+[ -d "$MODULE" ] || MODULE="."
 ```
 
 Read the config file to get configurable paths:
@@ -111,62 +111,80 @@ For each proposed item (up to 4 per batch):
 
 #### Step 4.1: Create imperative files
 
-For each confirmed imperative, create a file at `<memory_imperatives_path>/Title.md` using the Imperative schema from CLAUDE.md:
+For each confirmed imperative, create a file at `<memory_imperatives_path>/Title.md`:
 
 ```yaml
 title: Short descriptive title
 aliases: []
 tags:
+  - type/memory/imperative
 keywords:
   - "[[Topic]]"
+collection: "[[Orchestration/Memory/Imperatives/Imperatives|Imperatives]]"
+icon: LiShield
+cssclasses:
+  - memory
+created: YYYY-MM-DD HH:mm Z
+updated:
+related: []
 context: What prompted this imperative
 decision: What was decided
 rationale: Why this approach was chosen
 status: Active
-superseded_by:
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
+superseded:
 ```
 
-Body = expanded detail where frontmatter fields are too brief.
+Body (under `## Context` heading) = expanded detail where frontmatter fields are too brief.
 
 #### Step 4.2: Create insight files
 
-For each confirmed insight, create a file at `<memory_insights_path>/Title.md` using the Insight schema:
+For each confirmed insight, create a file at `<memory_insights_path>/Title.md`:
 
 ```yaml
 title: Short descriptive title
 aliases: []
 tags:
+  - type/memory/insight
 keywords:
   - "[[Topic]]"
+collection: "[[Orchestration/Memory/Insights/Insights|Insights]]"
+icon: LiLightbulb
+cssclasses:
+  - memory
+created: YYYY-MM-DD HH:mm Z
+updated:
+related: []
 origin: Where the learning came from
 insight: Concise factual finding
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
 ```
 
-Body = the rule (actionable takeaway, verbose enough for future-self).
+Body (under `## Context` heading) = the rule (actionable takeaway, verbose enough for future-self).
 
 #### Step 4.3: Create idea files
 
-For each confirmed idea, create a file at `<memory_ideas_path>/Title.md` using the Idea schema:
+For each confirmed idea, create a file at `<memory_ideas_path>/Title.md`:
 
 ```yaml
 title: Short descriptive title
 aliases: []
 tags:
+  - type/memory/idea
 keywords:
   - "[[Topic]]"
+collection: "[[Orchestration/Memory/Ideas/Ideas|Ideas]]"
+icon: LiSparkles
+cssclasses:
+  - memory
+created: YYYY-MM-DD HH:mm Z
+updated:
+related: []
 spark: What prompted this idea
 idea: Concise description of the proposal
 status: Open
-adopted_as:
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
+adopted:
 ```
 
-Body = expanded detail, potential approaches, considerations.
+Body (under `## Context` heading) = expanded detail, potential approaches, considerations.
 
 ### Phase 5: Update Daily Log & Backlog
 
@@ -204,5 +222,4 @@ Show the user a complete list of:
 
 Tell the user: "Reflection complete. You can end the session now, or continue working."
 
-!`"${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}/hooks/skill-load.sh" 2>/dev/null`
-!`"${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}/Modules/forge-reflect/hooks/skill-load.sh" 2>/dev/null`
+!`dispatch skill-load forge-reflect`
