@@ -9,6 +9,12 @@ insight_marker: "★ Insight"
 memory_paths:
   - "Memory/Insights/"
   - "Memory/Imperatives/"
+write_tool_names:
+  - "Edit"
+  - "Write"
+  - "edit"
+  - "write"
+  - "safe-write"
 
 # Substantiality thresholds
 tool_turn_threshold: 10

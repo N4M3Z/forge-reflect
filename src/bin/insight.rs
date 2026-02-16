@@ -18,11 +18,16 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    if !forge_reflect::in_data_dir(&input.cwd, &config) {
-        eprintln!(
-            "forge-reflect[insight]: cwd '{}' outside data dir, skipping",
-            input.cwd
-        );
+    let cwd = if input.cwd.is_empty() {
+        std::env::current_dir()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    } else {
+        input.cwd
+    };
+
+    if !forge_reflect::in_data_dir(&cwd, &config) {
+        eprintln!("forge-reflect[insight]: cwd '{cwd}' outside data dir, skipping");
         return ExitCode::SUCCESS;
     }
 
@@ -36,26 +41,62 @@ fn main() -> ExitCode {
 
     let analysis = transcript::analyze_transcript(&transcript, &config);
 
-    // Count-based heuristic: compares insight blocks output vs Insight files written.
-    // Known limitation: matches by count, not content. A session that writes 2 insight
-    // files about unrelated topics and outputs 2 insight blocks will pass even if they
-    // don't correspond. Acceptable for a human-in-the-loop guardrail.
-    let uncaptured = analysis
-        .insight_count
-        .saturating_sub(analysis.insights_write_count);
+    let mut uncaptured_topics = Vec::new();
+    for topic in &analysis.insight_topics {
+        let topic_lower = topic.to_lowercase();
+        let mut matched = false;
+        for written in &analysis.insights_written {
+            let written_base = written
+                .strip_suffix(".md")
+                .unwrap_or(written)
+                .to_lowercase();
+            // Match if topic is in filename or vice versa, or if they share significant overlap
+            if written_base.contains(&topic_lower) || topic_lower.contains(&written_base) {
+                matched = true;
+                break;
+            }
+        }
+        if !matched {
+            uncaptured_topics.push(topic.as_str());
+        }
+    }
 
-    if uncaptured > 0 {
-        eprintln!(
-            "forge-reflect[insight]: blocking — {} insight(s), {} Insight file(s) written",
-            analysis.insight_count, analysis.insights_write_count
+    // Handle cases where markers exist but no topics were extracted
+    let unnamed_uncaptured = analysis
+        .insight_count
+        .saturating_sub(analysis.insight_topics.len())
+        .saturating_sub(
+            analysis.insights_write_count.saturating_sub(
+                analysis
+                    .insight_topics
+                    .len()
+                    .saturating_sub(uncaptured_topics.len()),
+            ),
         );
-        let skill_path = config.resolve_user_path(&input.cwd, &config.insight_check);
+
+    // Final uncaptured count
+    let total_uncaptured = uncaptured_topics.len() + unnamed_uncaptured;
+
+    if total_uncaptured > 0 {
+        let mut reason_detail = String::new();
+        if !uncaptured_topics.is_empty() {
+            reason_detail = format!(": {}", uncaptured_topics.join(", "));
+        } else if unnamed_uncaptured > 0 {
+            reason_detail = format!(" ({unnamed_uncaptured} unnamed)");
+        }
+
+        eprintln!(
+            "forge-reflect[insight]: blocking — {total_uncaptured} uncaptured insight(s){reason_detail}"
+        );
+        let skill_path = config.resolve_user_path(&cwd, &config.insight_check);
         let base_reason = prompt::load_pattern_abs(&skill_path)
             .unwrap_or_else(|| config.uncaptured_insight_reason.clone());
 
         let reason = format!(
-            "{base_reason} ({} insight(s) found, {} Insight file(s) written)",
-            analysis.insight_count, analysis.insights_write_count
+            "{} ({} uncaptured insight(s){})",
+            base_reason.trim(),
+            total_uncaptured,
+            reason_detail
         );
         let output = serde_json::json!({
             "decision": "block",

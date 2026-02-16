@@ -12,6 +12,8 @@ pub struct Config {
     /// Path fragments for substring matching in transcript `tool_use` entries.
     /// First element is the insights path (used for insight counting).
     pub memory_paths: Vec<String>,
+    /// Tool names that are treated as file-writing operations in transcripts.
+    pub write_tool_names: Vec<String>,
 
     // Substantiality thresholds
     pub tool_turn_threshold: usize,
@@ -83,6 +85,13 @@ impl Default for Config {
             memory_paths: vec![
                 "Memory/Insights/".to_string(),
                 "Memory/Imperatives/".to_string(),
+            ],
+            write_tool_names: vec![
+                "Edit".to_string(),
+                "Write".to_string(),
+                "edit".to_string(),
+                "write".to_string(),
+                "safe-write".to_string(),
             ],
             tool_turn_threshold: 10,
             user_msg_threshold: 4,
@@ -157,22 +166,44 @@ impl Config {
             .map_or("Memory/Insights/", |s| s.as_str())
     }
 
-    /// Load config from `$CLAUDE_PLUGIN_ROOT/{config,defaults}.yaml`.
-    /// Returns defaults if the env var is unset or the file is unreadable.
-    /// Always resolves user_root (via env var or defaults.yaml discovery).
+    /// Load config from `{config,defaults}.yaml` in the module root directory.
+    /// Discovery order: `FORGE_MODULE_ROOT` env → `CLAUDE_PLUGIN_ROOT` env →
+    /// binary path self-discovery (target/release/ → 3 levels up).
+    /// Returns compiled defaults if no module root is found.
+    /// Always resolves `user_root` (via env var or defaults.yaml discovery).
     pub fn load() -> Self {
-        let mut config: Self = match std::env::var("CLAUDE_PLUGIN_ROOT") {
-            Ok(root) => {
-                let plugin_root = Path::new(&root);
-                forge_core::yaml::load_config(plugin_root).unwrap_or_else(|e| {
-                    eprintln!("forge-reflect: {e}, using defaults");
-                    Self::default()
-                })
+        let module_root = std::env::var("FORGE_MODULE_ROOT")
+            .or_else(|_| std::env::var("CLAUDE_PLUGIN_ROOT"))
+            .or_else(|_| {
+                // Binary is at target/release/<name>, module root is 3 levels up
+                std::env::current_exe()
+                    .ok()
+                    .and_then(|exe| exe.parent()?.parent()?.parent().map(Path::to_path_buf))
+                    .filter(|p| p.join("config.yaml").exists() || p.join("defaults.yaml").exists())
+                    .map(|p| p.to_string_lossy().into_owned())
+                    .ok_or(std::env::VarError::NotPresent)
+            });
+
+        let mut config: Self = if let Ok(root) = module_root {
+            let plugin_root = Path::new(&root);
+
+            // Ensure FORGE_ROOT is set so user_root/ProjectConfig discovery works.
+            // Module lives at <project>/Modules/<name>, so project root is 2 up.
+            if std::env::var("FORGE_ROOT").is_err() {
+                if let Some(project) = plugin_root.parent().and_then(Path::parent) {
+                    if project.join("defaults.yaml").exists() {
+                        std::env::set_var("FORGE_ROOT", project);
+                    }
+                }
             }
-            Err(_) => {
-                eprintln!("forge-reflect: CLAUDE_PLUGIN_ROOT not set, using defaults");
+
+            forge_core::yaml::load_config(plugin_root).unwrap_or_else(|e| {
+                eprintln!("forge-reflect: {e}, using defaults");
                 Self::default()
-            }
+            })
+        } else {
+            eprintln!("forge-reflect: module root not found, using defaults");
+            Self::default()
         };
 
         // Always resolve user root — works with env var, caller args, or discovery
@@ -217,7 +248,7 @@ impl Config {
         );
     }
 
-    /// Resolve a user-content path against user_root (or cwd fallback).
+    /// Resolve a user-content path against `user_root` (or cwd fallback).
     pub fn resolve_user_path(&self, cwd: &str, relative: &str) -> PathBuf {
         forge_core::yaml::resolve_path(&self.user_root, cwd, relative)
     }

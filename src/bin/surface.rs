@@ -6,6 +6,16 @@ use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let config = Config::load();
+    let input = forge_reflect::read_hook_input().unwrap_or_default();
+
+    let cwd = if input.cwd.is_empty() {
+        std::env::current_dir()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    } else {
+        input.cwd
+    };
+
     let today = Local::now().date_naive();
     let day_of_year = today.ordinal();
 
@@ -15,12 +25,12 @@ fn main() -> ExitCode {
     // lives in /DailyPlan. Surface is for serendipity and rediscovery.
 
     // --- Stale ideas ---
-    if let Some(s) = ideas_section(&config, today, day_of_year) {
+    if let Some(s) = ideas_section(&config, &cwd, today, day_of_year) {
         sections.push(s);
     }
 
     // --- Rediscovery pool (tabs + backlog, mixed) ---
-    if let Some(s) = rediscovery_section(&config, day_of_year) {
+    if let Some(s) = rediscovery_section(&config, &cwd, day_of_year) {
         sections.push(s);
     }
 
@@ -38,16 +48,13 @@ fn main() -> ExitCode {
 }
 
 /// Resolve a user-content path (relative to vault root).
-fn resolve_user(config: &Config, relative: &str) -> std::path::PathBuf {
-    let cwd = std::env::current_dir()
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    config.resolve_user_path(&cwd, relative)
+fn resolve_user(config: &Config, cwd: &str, relative: &str) -> std::path::PathBuf {
+    config.resolve_user_path(cwd, relative)
 }
 
 /// Ideas section: stale open ideas.
-fn ideas_section(config: &Config, today: NaiveDate, day_of_year: u32) -> Option<String> {
-    let ideas_dir = resolve_user(config, &config.memory.ideas);
+fn ideas_section(config: &Config, cwd: &str, today: NaiveDate, day_of_year: u32) -> Option<String> {
+    let ideas_dir = resolve_user(config, cwd, &config.memory.ideas);
     if !ideas_dir.is_dir() {
         return None;
     }
@@ -62,7 +69,7 @@ fn ideas_section(config: &Config, today: NaiveDate, day_of_year: u32) -> Option<
     for entry in read_dir {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
-        if path.extension().map_or(true, |e| e != "md") {
+        if path.extension().is_none_or(|e| e != "md") {
             continue;
         }
 
@@ -82,17 +89,17 @@ fn ideas_section(config: &Config, today: NaiveDate, day_of_year: u32) -> Option<
 }
 
 /// Rediscovery section: rotate through a mixed pool of tabs + backlog items.
-fn rediscovery_section(config: &Config, day_of_year: u32) -> Option<String> {
+fn rediscovery_section(config: &Config, cwd: &str, day_of_year: u32) -> Option<String> {
     let mut pool: Vec<String> = Vec::new();
 
     // Collect tab titles from most recent archive
-    let archive_dir = resolve_user(config, &config.surface.archive_dir);
+    let archive_dir = resolve_user(config, cwd, &config.surface.archive_dir);
     if archive_dir.is_dir() {
         let mut candidates: Vec<_> = fs::read_dir(&archive_dir)
             .ok()
             .into_iter()
             .flatten()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| {
                 e.file_name()
                     .to_string_lossy()
@@ -109,7 +116,7 @@ fn rediscovery_section(config: &Config, day_of_year: u32) -> Option<String> {
     }
 
     // Collect open backlog items
-    let backlog_path = resolve_user(config, &config.backlog);
+    let backlog_path = resolve_user(config, cwd, &config.backlog);
     if let Ok(content) = fs::read_to_string(&backlog_path) {
         pool.extend(surface::extract_backlog_titles(&content));
     }

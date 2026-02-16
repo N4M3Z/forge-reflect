@@ -10,6 +10,7 @@ Interactive end-of-session (or mid-session) reflection. Reviews what happened in
 ## Instructions
 
 Follow these phases IN ORDER. Every phase that needs user input MUST use AskUserQuestion with pre-guessed options. The user can always select "Other" for free-text input.
+If AskUserQuestion is unavailable in the current runtime, emulate the same flow in plain chat with numbered options and identical capture/adjust/skip gates.
 
 ### Phase 1: Read Configuration
 
@@ -17,8 +18,8 @@ Follow these phases IN ORDER. Every phase that needs user input MUST use AskUser
 
 First, resolve the module root (handles both standalone and forge-core module paths):
 ```bash
-MODULE="${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect"
-[ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT}"
+MODULE="${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}"
+[ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT:-.}"
 ```
 
 Read the config file to get configurable paths:
@@ -110,7 +111,7 @@ For each proposed item (up to 4 per batch):
 
 #### Step 4.1: Create imperative files
 
-For each confirmed imperative, create a file at `<memory_imperatives_path>/YYYY-MM-DD — Title.md` using the Imperative schema from CLAUDE.md:
+For each confirmed imperative, create a file at `<memory_imperatives_path>/Title.md` using the Imperative schema from CLAUDE.md:
 
 ```yaml
 title: Short descriptive title
@@ -131,7 +132,7 @@ Body = expanded detail where frontmatter fields are too brief.
 
 #### Step 4.2: Create insight files
 
-For each confirmed insight, create a file at `<memory_insights_path>/YYYY-MM-DD — Title.md` using the Insight schema:
+For each confirmed insight, create a file at `<memory_insights_path>/Title.md` using the Insight schema:
 
 ```yaml
 title: Short descriptive title
@@ -149,7 +150,7 @@ Body = the rule (actionable takeaway, verbose enough for future-self).
 
 #### Step 4.3: Create idea files
 
-For each confirmed idea, create a file at `<memory_ideas_path>/YYYY-MM-DD — Title.md` using the Idea schema:
+For each confirmed idea, create a file at `<memory_ideas_path>/Title.md` using the Idea schema:
 
 ```yaml
 title: Short descriptive title
@@ -180,7 +181,7 @@ Follow the journal style:
 - Notes as plain text children
 - Wikilink liberally — people, projects, organizations, topics
 
-For insights: dual-write by adding a log entry that wikilinks to the insight file (full filename with date prefix).
+For insights: dual-write by adding a log entry that wikilinks to the insight file (full filename).
 
 #### Step 5.2: Update backlog
 
@@ -203,5 +204,5 @@ Show the user a complete list of:
 
 Tell the user: "Reflection complete. You can end the session now, or continue working."
 
-!`"${CLAUDE_PLUGIN_ROOT}/hooks/skill-load.sh" 2>/dev/null`
-!`"${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect/hooks/skill-load.sh" 2>/dev/null`
+!`"${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}/hooks/skill-load.sh" 2>/dev/null`
+!`"${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}/Modules/forge-reflect/hooks/skill-load.sh" 2>/dev/null`

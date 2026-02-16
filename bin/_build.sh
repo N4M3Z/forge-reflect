@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared build-on-demand logic. Source this, don't execute directly.
 
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(builtin cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+PLUGIN_ROOT="${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-$(builtin cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}}"
 BIN_DIR="$PLUGIN_ROOT/target/release"
 
 ensure_built() {

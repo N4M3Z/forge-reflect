@@ -4,7 +4,7 @@
 set -euo pipefail
 
 MODULE_ROOT="${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-$(builtin cd "$(dirname "$0")/.." && pwd)}}"
-export CLAUDE_PLUGIN_ROOT="$MODULE_ROOT"  # So _build.sh finds Cargo.toml
+export FORGE_MODULE_ROOT="$MODULE_ROOT"
 
 source "$MODULE_ROOT/bin/_build.sh"
 ensure_built reflect || exit 0

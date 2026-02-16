@@ -6,16 +6,20 @@
 
 ```bash
 cargo test --manifest-path Modules/forge-reflect/Cargo.toml
+cargo clippy --manifest-path Modules/forge-reflect/Cargo.toml -- -D warnings
+cargo fmt --manifest-path Modules/forge-reflect/Cargo.toml --check
 ```
 
-Expected: 50 tests pass (config, surface, transcript, prompt modules).
+Expected: 53 tests pass (config, surface, transcript, prompt modules).
+Clippy and fmt must also pass clean.
 
 ## Binaries available
 
 ```bash
-command -v surface    # or: Modules/forge-reflect/bin/surface --help
-command -v insight    # or: Modules/forge-reflect/bin/insight --help
-command -v reflect    # or: Modules/forge-reflect/bin/reflect --help
+# Check availability and help
+surface --help
+insight --help
+reflect --help
 ```
 
 ## Manual checks
@@ -23,26 +27,21 @@ command -v reflect    # or: Modules/forge-reflect/bin/reflect --help
 ### surface (SessionStart digest)
 
 ```bash
-FORGE_ROOT=. FORGE_USER_ROOT=Vaults/Personal \
-  Modules/forge-reflect/bin/surface
-# Should emit digest sections (backlog, ideas, journal gaps)
-# Empty sections are omitted — some output depends on vault content
+# Can be run without args (uses CWD) or with --cwd
+surface --cwd .
 ```
 
 ### insight (uncaptured insight detection)
 
 ```bash
-echo "No insights here" | Modules/forge-reflect/bin/insight
-echo $?   # should be 0 (no uncaptured insights → allow)
-
-echo "★ Insight: something learned" | Modules/forge-reflect/bin/insight
-echo $?   # should be 2 (uncaptured insight → block with prompt)
+# Topic-based matching (blocks if "My Topic" not in Memory/Insights/My Topic.md)
+echo '{"type":"assistant","message":{"content":[{"type":"text","text":"★ Insight: My Topic"}]}}' | insight --cwd . --transcript-path /dev/stdin
 ```
 
 ### reflect (session substantiality)
 
 ```bash
-echo '{"tool_turns":2,"user_messages":1}' | Modules/forge-reflect/bin/reflect
+echo '{"type":"human"}' | reflect --cwd . --transcript-path /dev/stdin
 echo $?   # should be 0 (below threshold → no reflection needed)
 ```
 
@@ -53,10 +52,26 @@ ls Modules/forge-reflect/skills/*/SKILL.md
 # Should list: InsightCheck, SessionReflect, MemoryInsights, Surface
 ```
 
+## OpenCode plugin
+
+If using opencode, verify the plugin adapter loads:
+
+```bash
+ls .opencode/plugins/forge-reflect.ts
+# Should exist
+```
+
+The plugin auto-builds binaries on first use. To verify manually:
+
+```bash
+cargo build --release --manifest-path Cargo.toml
+# Then start opencode in the repo — surface digest should appear as a toast
+```
+
 ## Expected results
 
 - All 3 binaries compile and are available in PATH (or via bin/ wrappers)
 - `surface` generates digest from vault content (graceful with missing data)
 - `insight` detects `★ Insight` markers and blocks if uncaptured
 - `reflect` applies substantiality heuristic based on tool/message counts
-- All 50 tests pass
+- All 53 tests pass, clippy clean, fmt clean

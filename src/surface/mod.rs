@@ -1,10 +1,11 @@
-//! Surfacing — pure parsing functions for SessionStart digest.
+//! Surfacing — pure parsing functions for `SessionStart` digest.
 //!
 //! All functions take string content and return `Option<String>` (None = nothing to show).
 //! No I/O — the binary handles subprocess calls and file reads.
 
 use chrono::NaiveDate;
 use regex::Regex;
+use std::fmt::Write;
 
 /// Parsed backlog item.
 struct BacklogItem {
@@ -41,11 +42,8 @@ pub fn parse_backlog(content: &str, today: NaiveDate, horizon_days: u32) -> Opti
         // Strip markdown task prefix and metadata
         let desc = line
             .trim_start_matches("- [ ] ")
-            .replace(&date_re.find(line).map_or("", |m| m.as_str()), "")
-            .replace(
-                &priority_re.find(line).map_or("", |m| m.as_str()),
-                "",
-            )
+            .replace(date_re.find(line).map_or("", |m| m.as_str()), "")
+            .replace(priority_re.find(line).map_or("", |m| m.as_str()), "")
             .trim()
             .to_string();
 
@@ -73,17 +71,18 @@ pub fn parse_backlog(content: &str, today: NaiveDate, horizon_days: u32) -> Opti
         output.push_str("Overdue:\n");
         for item in &overdue {
             let due_str = item.due.map_or(String::new(), |d| format!(", due {d}"));
-            output.push_str(&format!(
-                "  \u{2022} {} [{}{due_str}]\n",
+            let _ = writeln!(
+                output,
+                "  \u{2022} {} [{}{due_str}]",
                 item.description, item.priority
-            ));
+            );
         }
     }
     if !due_soon.is_empty() {
         output.push_str("Due soon:\n");
         for item in &due_soon {
             let due_str = item.due.map_or(String::new(), |d| format!("due {d}"));
-            output.push_str(&format!("  \u{2022} {} [{due_str}]\n", item.description));
+            let _ = writeln!(output, "  \u{2022} {} [{due_str}]", item.description);
         }
     }
 
@@ -102,26 +101,26 @@ pub fn format_reminders(json: &str, today: NaiveDate) -> Option<String> {
     let mut output = format!("Reminders ({count}):\n");
 
     for r in reminders.iter().take(5) {
-        let title = r.get("title").and_then(|t| t.as_str()).unwrap_or("Untitled");
-        let when = r
-            .get("dueDate")
-            .and_then(|d| d.as_str())
-            .and_then(|d| {
-                // Parse ISO date, compute relative label
-                let date = NaiveDate::parse_from_str(&d[..10], "%Y-%m-%d").ok()?;
-                let diff = (date - today).num_days();
-                Some(match diff {
-                    0 => "today".to_string(),
-                    1 => "tomorrow".to_string(),
-                    d if d < 0 => format!("{}d overdue", d.abs()),
-                    _ => date.format("%a %d %b").to_string(),
-                })
-            });
+        let title = r
+            .get("title")
+            .and_then(|t| t.as_str())
+            .unwrap_or("Untitled");
+        let when = r.get("dueDate").and_then(|d| d.as_str()).and_then(|d| {
+            // Parse ISO date, compute relative label
+            let date = NaiveDate::parse_from_str(&d[..10], "%Y-%m-%d").ok()?;
+            let diff = (date - today).num_days();
+            Some(match diff {
+                0 => "today".to_string(),
+                1 => "tomorrow".to_string(),
+                d if d < 0 => format!("{}d overdue", d.abs()),
+                _ => date.format("%a %d %b").to_string(),
+            })
+        });
 
         if let Some(w) = when {
-            output.push_str(&format!("  \u{2022} {title} ({w})\n"));
+            let _ = writeln!(output, "  \u{2022} {title} ({w})");
         } else {
-            output.push_str(&format!("  \u{2022} {title}\n"));
+            let _ = writeln!(output, "  \u{2022} {title}");
         }
     }
 
@@ -130,7 +129,7 @@ pub fn format_reminders(json: &str, today: NaiveDate) -> Option<String> {
 
 /// Parse Ideas directory entries. Returns stale (open, older than cutoff) ideas with rotation.
 ///
-/// `entries`: Vec of (filename, status, created_date_str) tuples.
+/// `entries`: Vec of (filename, status, `created_date_str`) tuples.
 /// `cutoff`: date before which an idea is considered stale.
 /// `day_of_year`: used for rotating which ideas to show.
 pub fn parse_ideas(
@@ -162,15 +161,13 @@ pub fn parse_ideas(
     let offset = day_of_year as usize % count;
 
     let mut output = format!("Stale ideas ({count}):\n");
-    let mut shown = 0;
-    for i in 0..count {
+    for (shown, i) in (0..count).enumerate() {
         if shown >= max {
             break;
         }
         let idx = (offset + i) % count;
         let (title, created) = stale[idx];
-        output.push_str(&format!("  \u{2022} {title} (since {created})\n"));
-        shown += 1;
+        let _ = writeln!(output, "  \u{2022} {title} (since {created})");
     }
 
     Some(output)
@@ -237,7 +234,7 @@ pub fn format_rotating_pool(items: &[String], max: usize, offset: usize) -> Opti
 
     for i in 0..max.min(count) {
         let idx = (start + i) % count;
-        output.push_str(&format!("  \u{2022} {}\n", items[idx]));
+        let _ = writeln!(output, "  \u{2022} {}", items[idx]);
     }
 
     Some(output)
@@ -260,7 +257,7 @@ pub fn parse_captured_tabs(content: &str, max: usize, offset: usize) -> Option<S
 
     for i in 0..max.min(count) {
         let idx = (start + i) % count;
-        output.push_str(&format!("  \u{2022} {}\n", titles[idx]));
+        let _ = writeln!(output, "  \u{2022} {}", titles[idx]);
     }
 
     Some(output)
@@ -304,7 +301,7 @@ pub fn parse_journal_gaps(content: &str) -> Option<String> {
 
     let mut output = String::from("Yesterday:\n");
     for item in &unchecked {
-        output.push_str(&format!("  \u{2022} {item}\n"));
+        let _ = writeln!(output, "  \u{2022} {item}");
     }
     Some(output)
 }

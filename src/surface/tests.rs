@@ -87,10 +87,26 @@ fn reminders_no_due_date() {
 #[test]
 fn ideas_stale_items_with_rotation() {
     let entries = vec![
-        ("Alpha idea".to_string(), "Open".to_string(), "2026-01-01".to_string()),
-        ("Beta idea".to_string(), "Open".to_string(), "2026-01-05".to_string()),
-        ("Gamma idea".to_string(), "Adopted".to_string(), "2026-01-01".to_string()),
-        ("Delta idea".to_string(), "Open".to_string(), "2026-01-10".to_string()),
+        (
+            "Alpha idea".to_string(),
+            "Open".to_string(),
+            "2026-01-01".to_string(),
+        ),
+        (
+            "Beta idea".to_string(),
+            "Open".to_string(),
+            "2026-01-05".to_string(),
+        ),
+        (
+            "Gamma idea".to_string(),
+            "Adopted".to_string(),
+            "2026-01-01".to_string(),
+        ),
+        (
+            "Delta idea".to_string(),
+            "Open".to_string(),
+            "2026-01-10".to_string(),
+        ),
     ];
     let result = parse_ideas(&entries, date("2026-01-20"), 0, 2).unwrap();
     assert!(result.contains("Stale ideas (3):"));
@@ -101,9 +117,11 @@ fn ideas_stale_items_with_rotation() {
 
 #[test]
 fn ideas_none_stale_returns_none() {
-    let entries = vec![
-        ("Recent".to_string(), "Open".to_string(), "2026-02-10".to_string()),
-    ];
+    let entries = vec![(
+        "Recent".to_string(),
+        "Open".to_string(),
+        "2026-02-10".to_string(),
+    )];
     // Cutoff is 2026-02-01 — entry created after cutoff, so not stale
     assert!(parse_ideas(&entries, date("2026-02-01"), 0, 3).is_none());
 }
@@ -111,8 +129,16 @@ fn ideas_none_stale_returns_none() {
 #[test]
 fn ideas_skips_non_open() {
     let entries = vec![
-        ("Adopted".to_string(), "Adopted".to_string(), "2026-01-01".to_string()),
-        ("Dismissed".to_string(), "Dismissed".to_string(), "2026-01-01".to_string()),
+        (
+            "Adopted".to_string(),
+            "Adopted".to_string(),
+            "2026-01-01".to_string(),
+        ),
+        (
+            "Dismissed".to_string(),
+            "Dismissed".to_string(),
+            "2026-01-01".to_string(),
+        ),
     ];
     assert!(parse_ideas(&entries, date("2026-02-12"), 0, 3).is_none());
 }

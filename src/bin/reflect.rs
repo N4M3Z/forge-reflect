@@ -13,12 +13,20 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     };
 
+    let cwd = if input.cwd.is_empty() {
+        std::env::current_dir()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    } else {
+        input.cwd
+    };
+
     // PreCompact: always inject reflection prompt, regardless of directory scope.
     // This ensures compaction context includes reflection guidance everywhere.
     if input.trigger.is_some() {
-        let skill_path = config.resolve_user_path(&input.cwd, &config.reflection);
-        let reason = prompt::load_pattern_abs(&skill_path)
-            .unwrap_or_else(|| config.fallback_reason.clone());
+        let skill_path = config.resolve_user_path(&cwd, &config.reflection);
+        let reason =
+            prompt::load_pattern_abs(&skill_path).unwrap_or_else(|| config.fallback_reason.clone());
 
         let output = serde_json::json!({
             "additionalContext": format!("{}{reason}", config.precompact_prefix)
@@ -33,11 +41,8 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    if !forge_reflect::in_data_dir(&input.cwd, &config) {
-        eprintln!(
-            "forge-reflect[reflect]: cwd '{}' outside data dir, skipping",
-            input.cwd
-        );
+    if !forge_reflect::in_data_dir(&cwd, &config) {
+        eprintln!("forge-reflect[reflect]: cwd '{cwd}' outside data dir, skipping");
         return ExitCode::SUCCESS;
     }
 
@@ -69,9 +74,9 @@ fn main() -> ExitCode {
 
     // Substantial + no memory writes → block and prompt reflection
     eprintln!("forge-reflect[reflect]: blocking — substantial session with no memory writes");
-    let skill_path = config.resolve_user_path(&input.cwd, &config.reflection);
-    let reason = prompt::load_pattern_abs(&skill_path)
-        .unwrap_or_else(|| config.fallback_reason.clone());
+    let skill_path = config.resolve_user_path(&cwd, &config.reflection);
+    let reason =
+        prompt::load_pattern_abs(&skill_path).unwrap_or_else(|| config.fallback_reason.clone());
 
     let output = serde_json::json!({
         "decision": "block",

@@ -13,8 +13,8 @@ Manual equivalent of the insight Stop hook. Scans the current conversation for `
 
 First, resolve the module root (handles both standalone and forge-core module paths):
 ```bash
-MODULE="${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect"
-[ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT}"
+MODULE="${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}"
+[ -d "$MODULE" ] || MODULE="${CLAUDE_PLUGIN_ROOT:-.}"
 ```
 
 Read the config file to get the insights path:
@@ -47,5 +47,5 @@ If uncaptured insights exist:
 - For each, propose an insight file title and ask: "Want me to capture these now?"
 - If the user confirms, create the insight files following the Insight schema from CLAUDE.md
 
-!`"${CLAUDE_PLUGIN_ROOT}/hooks/skill-load.sh" 2>/dev/null`
-!`"${CLAUDE_PLUGIN_ROOT}/Modules/forge-reflect/hooks/skill-load.sh" 2>/dev/null`
+!`"${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}/hooks/skill-load.sh" 2>/dev/null`
+!`"${FORGE_MODULE_ROOT:-${CLAUDE_PLUGIN_ROOT:-.}}/Modules/forge-reflect/hooks/skill-load.sh" 2>/dev/null`
