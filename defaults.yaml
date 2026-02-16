@@ -40,6 +40,7 @@ journal:
   daily: Resources/Journals/Daily/YYYY/MM/YYYY-MM-DD.md
 commands:
   safe_read: Modules/forge-tlp/bin/safe-read
+  safe_write: Modules/forge-tlp/bin/safe-write
 backlog: Orchestration/Backlog.md
 
 # Surfacing (SessionStart digest)
