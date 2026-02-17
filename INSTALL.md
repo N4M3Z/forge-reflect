@@ -121,6 +121,9 @@ the module root from their filesystem location.
 |-----------|----------|---------|
 | Rust + cargo | Yes | Build the 3 binaries |
 | ekctl | Optional | Reminders in surface digest (macOS only) |
+| [safety-net](https://github.com/kenryu42/claude-code-safety-net) | Recommended | Blocks destructive commands — see [root INSTALL.md](../../INSTALL.md#recommended-security-tools) |
+| shellcheck | Recommended | `brew install shellcheck` — shell script linting |
+| semgrep | Recommended | `brew install semgrep` — OWASP static analysis for Rust |
 
 ## Verify
 
