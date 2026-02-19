@@ -69,7 +69,7 @@ fn test_counts_insight_markers() {
             "Here is some analysis.\n\n\u{2605} Insight \u{2500}\nSomething learned\n\u{2500}",
         ),
         make_human(),
-        make_assistant_text("Another \u{2605} Insight \u{2500}\nMore stuff\n\u{2500}"),
+        make_assistant_text("More analysis:\n\u{2605} Insight \u{2500}\nMore stuff\n\u{2500}"),
     ]
     .join("\n");
 
@@ -77,6 +77,19 @@ fn test_counts_insight_markers() {
     assert_eq!(analysis.insight_count, 2);
     assert_eq!(analysis.insights_write_count, 0);
     assert_eq!(analysis.user_messages, 2);
+}
+
+#[test]
+fn test_mid_line_insight_marker_not_matched() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("The marker is \u{2605} Insight and the regex matches it"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insight_count, 0);
+    assert!(analysis.insight_topics.is_empty());
 }
 
 #[test]
@@ -131,11 +144,7 @@ fn test_custom_insight_marker() {
     let mut config = Config::default();
     config.insight_marker = "CUSTOM_MARKER".to_string();
 
-    let transcript = [
-        make_human(),
-        make_assistant_text("Found a CUSTOM_MARKER here"),
-    ]
-    .join("\n");
+    let transcript = [make_human(), make_assistant_text("CUSTOM_MARKER here")].join("\n");
 
     let analysis = analyze_transcript(&transcript, &config);
     assert_eq!(analysis.insight_count, 1);
@@ -153,7 +162,10 @@ fn test_topic_extraction() {
 
     let analysis = analyze_transcript(&transcript, &cfg());
     assert_eq!(analysis.insight_count, 3);
-    assert_eq!(analysis.insight_topics, vec!["Topic A", "Topic B", "Topic C"]);
+    assert_eq!(
+        analysis.insight_topics,
+        vec!["Topic A", "Topic B", "Topic C"]
+    );
 }
 
 #[test]
@@ -225,4 +237,47 @@ fn test_non_write_tool_does_not_count_memory_write() {
     assert_eq!(analysis.tool_using_turns, 1);
     assert_eq!(analysis.insights_write_count, 0);
     assert!(!analysis.has_memory_write);
+}
+
+// ─── Decorative border filtering ───
+
+#[test]
+fn test_decorative_border_not_extracted_as_topic() {
+    let transcript = [
+        make_human(),
+        make_assistant_text(
+            "\u{2605} Insight \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\nActual content\n\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}",
+        ),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    // Marker still counts as an insight
+    assert_eq!(analysis.insight_count, 1);
+    // But the decorative border is NOT pushed as a topic
+    assert!(analysis.insight_topics.is_empty());
+}
+
+#[test]
+fn test_real_topic_after_colon_not_filtered() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: forge-module alignment"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.insight_topics, vec!["forge-module alignment"]);
+}
+
+#[test]
+fn test_is_decorative() {
+    assert!(is_decorative("\u{2500}\u{2500}\u{2500}"));
+    assert!(is_decorative("---"));
+    assert!(is_decorative("___"));
+    assert!(is_decorative("```"));
+    assert!(!is_decorative("Real topic"));
+    assert!(!is_decorative("\u{2500} mixed text"));
+    assert!(!is_decorative(""));
 }

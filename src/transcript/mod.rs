@@ -26,9 +26,10 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
     };
 
     // Regex to find ★ Insight blocks and capture the topic.
-    // Matches "★ Insight: Topic" and "★ Insight Topic".
+    // Anchored to line-start ((?m)^) so prose ABOUT insights doesn't match.
+    // Matches "★ Insight: Topic" and "★ Insight Topic" at start of line.
     let insight_re = regex::Regex::new(&format!(
-        r"{}\s*:?\s*(.*)",
+        r"(?m)^\s*{}\s*:?\s*(.*)",
         regex::escape(&config.insight_marker)
     ))
     .expect("insight marker regex must compile");
@@ -56,7 +57,7 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
                     for cap in insight_re.captures_iter(text) {
                         analysis.insight_count += 1;
                         let topic = cap[1].trim();
-                        if !topic.is_empty() {
+                        if !topic.is_empty() && !is_decorative(topic) {
                             analysis.insight_topics.push(topic.to_string());
                         }
                     }
@@ -174,6 +175,14 @@ fn extract_file_path(item: &Value) -> Option<String> {
     }
 
     None
+}
+
+/// Returns true if the string is purely decorative box-drawing or border characters.
+/// Filters out insight "topics" like `─────────────` from formatted headers.
+fn is_decorative(s: &str) -> bool {
+    !s.is_empty()
+        && s.chars()
+            .all(|c| matches!(c, '─' | '━' | '═' | '╌' | '╍' | '-' | '_' | '`'))
 }
 
 #[cfg(test)]
