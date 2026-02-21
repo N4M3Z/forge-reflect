@@ -20,15 +20,15 @@ name = "surface"
 path = "src/bin/surface.rs"
 
 [dependencies]
-forge-core = { path = "../../Core" }
+forge-lib = { path = "lib" }
 chrono = "0.4"
 regex = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_yaml = "0.9"
 clap = { version = "4.5", features = ["derive"] }
 
 [dev-dependencies]
-serde_yaml = "0.9"
 tempfile = "3"
 assert_cmd = "2"
 predicates = "3"

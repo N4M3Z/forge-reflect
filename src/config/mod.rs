@@ -42,9 +42,14 @@ pub struct Config {
     // Surfacing
     pub surface: SurfaceConfig,
 
-    // Resolved at load time (not deserialized from YAML)
-    #[serde(skip)]
-    pub user_root: String,
+    // User content root (deserialized from YAML)
+    pub user: UserConfig,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+pub struct UserConfig {
+    pub root: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,7 +118,7 @@ impl Default for Config {
             commands: CommandsConfig::default(),
             backlog: "Orchestration/Backlog.md".to_string(),
             surface: SurfaceConfig::default(),
-            user_root: String::new(),
+            user: UserConfig::default(),
         }
     }
 }
@@ -157,6 +162,7 @@ impl Default for SurfaceConfig {
     }
 }
 
+
 impl Config {
     /// Insights path fragment, derived from first element of `memory_paths`.
     /// Used for counting insight file writes in transcript analysis.
@@ -170,7 +176,6 @@ impl Config {
     /// Discovery order: `FORGE_MODULE_ROOT` env → `CLAUDE_PLUGIN_ROOT` env →
     /// binary path self-discovery (target/release/ → 3 levels up).
     /// Returns compiled defaults if no module root is found.
-    /// Always resolves `user_root` (via env var or defaults.yaml discovery).
     pub fn load() -> Self {
         let module_root = std::env::var("FORGE_MODULE_ROOT")
             .or_else(|_| std::env::var("CLAUDE_PLUGIN_ROOT"))
@@ -186,18 +191,16 @@ impl Config {
 
         let mut config: Self = if let Ok(root) = module_root {
             let plugin_root = Path::new(&root);
-
-            // Ensure FORGE_ROOT is set so user_root/ProjectConfig discovery works.
-            // Module lives at <project>/Modules/<name>, so project root is 2 up.
-            if std::env::var("FORGE_ROOT").is_err() {
-                if let Some(project) = plugin_root.parent().and_then(Path::parent) {
-                    if project.join("defaults.yaml").exists() {
-                        std::env::set_var("FORGE_ROOT", project);
-                    }
-                }
-            }
-
-            forge_core::yaml::load_config(plugin_root).unwrap_or_else(|e| {
+            let defaults = forge_lib::sidecar::load_yaml_file(
+                &plugin_root.join("defaults.yaml"),
+            )
+            .unwrap_or(serde_yaml::Value::Null);
+            let overlay = forge_lib::sidecar::load_yaml_file(
+                &plugin_root.join("config.yaml"),
+            )
+            .unwrap_or(serde_yaml::Value::Null);
+            let merged = forge_lib::sidecar::merge_values(defaults, overlay);
+            serde_yaml::from_value(merged).unwrap_or_else(|e| {
                 eprintln!("forge-reflect: {e}, using defaults");
                 Self::default()
             })
@@ -206,51 +209,29 @@ impl Config {
             Self::default()
         };
 
-        // Always resolve user root — works with env var, caller args, or discovery
-        config.user_root = forge_core::yaml::user_root("", "");
+        // Resolve relative user.root against $HOME
+        if !config.user.root.is_empty() && !Path::new(&config.user.root).is_absolute() {
+            if let Ok(home) = std::env::var("HOME") {
+                config.user.root = Path::new(&home)
+                    .join(&config.user.root)
+                    .to_string_lossy()
+                    .into_owned();
+            }
+        }
 
-        // Overlay project-level shared config (defaults.yaml) onto compiled defaults.
-        // Module config.yaml overrides (already loaded above) take precedence.
-        let project = forge_core::project::ProjectConfig::load();
-        config.apply_shared(&project);
         config
     }
 
-    /// Apply project-level shared values where this config still has compiled defaults.
-    fn apply_shared(&mut self, project: &forge_core::project::ProjectConfig) {
-        use forge_core::project::apply_if_default;
-        let defaults = Self::default();
-        apply_if_default(
-            &mut self.commands.safe_read,
-            &defaults.commands.safe_read,
-            &project.commands.safe_read,
-        );
-        apply_if_default(
-            &mut self.journal.daily,
-            &defaults.journal.daily,
-            &project.journal.daily,
-        );
-        apply_if_default(&mut self.backlog, &defaults.backlog, &project.backlog);
-        apply_if_default(
-            &mut self.memory.imperatives,
-            &defaults.memory.imperatives,
-            &project.memory.imperatives,
-        );
-        apply_if_default(
-            &mut self.memory.insights,
-            &defaults.memory.insights,
-            &project.memory.insights,
-        );
-        apply_if_default(
-            &mut self.memory.ideas,
-            &defaults.memory.ideas,
-            &project.memory.ideas,
-        );
-    }
-
-    /// Resolve a user-content path against `user_root` (or cwd fallback).
+    /// Resolve a user-content path against `user.root` (or cwd fallback).
     pub fn resolve_user_path(&self, cwd: &str, relative: &str) -> PathBuf {
-        forge_core::yaml::resolve_path(&self.user_root, cwd, relative)
+        if Path::new(relative).is_absolute() {
+            return PathBuf::from(relative);
+        }
+        if self.user.root.is_empty() {
+            Path::new(cwd).join(relative)
+        } else {
+            Path::new(&self.user.root).join(relative)
+        }
     }
 }
 

@@ -1,8 +1,10 @@
 # forge-reflect default configuration.
-# Project-level shared paths (safe_read, journal, backlog, memory) come from
-# defaults.yaml shared: section. Override here only for standalone use.
 #
 # Override: create config.yaml (gitignored) with only the fields you want to change.
+
+# User content root (absolute path to vault). Empty = use cwd.
+user:
+  root: ""
 
 # Transcript analysis
 insight_marker: "★ Insight"
@@ -36,8 +38,7 @@ uncaptured_insight_reason: >-
   Uncaptured insights detected. Rule 12: every ★ Insight block
   MUST be persisted as a Memory/Insights/ file before ending.
 
-# Shared paths — authoritative source is defaults.yaml shared: section.
-# Kept here for standalone use and config.yaml override.
+# Vault topology paths
 memory:
   imperatives: Orchestration/Memory/Imperatives
   insights: Orchestration/Memory/Insights
@@ -56,6 +57,32 @@ promote:
   agents: Orchestration/Agents
   scripts: Scratch
   archive: Archives/Memory
+
+# Skill allowlists (provider-keyed, used by install-skills)
+skills:
+    claude:
+        InsightCheck:
+        MemoryHarvest:
+        MemoryInsights:
+        MemoryPromote:
+        SessionReflect:
+        Surface:
+
+    gemini:
+        InsightCheck:
+        MemoryHarvest:
+        MemoryInsights:
+        MemoryPromote:
+        SessionReflect:
+        Surface:
+
+    codex:
+        InsightCheck:
+        MemoryHarvest:
+        MemoryInsights:
+        MemoryPromote:
+        SessionReflect:
+        Surface:
 
 # Surfacing (SessionStart digest)
 surface:

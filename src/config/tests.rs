@@ -94,7 +94,7 @@ backlog: custom/backlog.md
 #[test]
 fn test_resolve_user_path() {
     let mut config = Config::default();
-    config.user_root = "/home/user/vault".to_string();
+    config.user.root = "/home/user/vault".to_string();
 
     let result = config.resolve_user_path("/home/user/data", "Orchestration/Backlog.md");
     assert_eq!(
@@ -105,7 +105,7 @@ fn test_resolve_user_path() {
 
 #[test]
 fn test_resolve_user_path_falls_back_to_cwd() {
-    let config = Config::default(); // user_root is empty
+    let config = Config::default(); // user.root is empty
 
     let result = config.resolve_user_path("/home/user/data", "Orchestration/Backlog.md");
     assert_eq!(
@@ -115,33 +115,13 @@ fn test_resolve_user_path_falls_back_to_cwd() {
 }
 
 #[test]
-fn test_apply_shared_fills_defaults() {
+fn test_resolve_user_path_absolute_passes_through() {
     let mut config = Config::default();
-    let mut project = forge_core::project::ProjectConfig::default();
-    project.backlog = "Custom/Backlog.md".to_string();
-    project.commands.safe_read = "custom/safe-read".to_string();
-    project.journal.daily = "Custom/YYYY-MM-DD.md".to_string();
-    project.memory.ideas = "Custom/Ideas".to_string();
+    config.user.root = "/home/user/vault".to_string();
 
-    config.apply_shared(&project);
-
-    assert_eq!(config.backlog, "Custom/Backlog.md");
-    assert_eq!(config.commands.safe_read, "custom/safe-read");
-    assert_eq!(config.journal.daily, "Custom/YYYY-MM-DD.md");
-    assert_eq!(config.memory.ideas, "Custom/Ideas");
-}
-
-#[test]
-fn test_apply_shared_preserves_module_overrides() {
-    let mut config = Config::default();
-    // Simulate a module config.yaml override
-    config.backlog = "Module/Override.md".to_string();
-
-    let mut project = forge_core::project::ProjectConfig::default();
-    project.backlog = "Custom/Backlog.md".to_string();
-
-    config.apply_shared(&project);
-
-    // Module override should win
-    assert_eq!(config.backlog, "Module/Override.md");
+    let result = config.resolve_user_path("/home/user/data", "/absolute/path");
+    assert_eq!(
+        result,
+        std::path::PathBuf::from("/absolute/path")
+    );
 }
