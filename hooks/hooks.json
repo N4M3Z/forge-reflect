@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/SessionStart.sh"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/PreCompact.sh"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/stop.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/Stop.sh"
           }
         ]
       }
