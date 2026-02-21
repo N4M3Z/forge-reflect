@@ -7,7 +7,7 @@ OpenCode also reads this file via its Claude Code compatibility layer.
 
 ## What This Is
 
-Session lifecycle module for the forge ecosystem. Surfaces actionable items at session start (stale ideas, captured tabs, backlog) and enforces memory capture at session end (blocks exit if insights go uncaptured). Rust crate with a path dependency on `forge-core` (`../../Core`).
+Session lifecycle module for the forge ecosystem. Surfaces actionable items at session start (stale ideas, captured tabs, backlog) and enforces memory capture at session end (blocks exit if insights go uncaptured). Rust crate using `forge-lib` for config loading.
 
 Works in Claude Code (native hooks), OpenCode (TypeScript plugin adapter at `.opencode/plugins/forge-reflect.ts`), and standalone CLI.
 
@@ -15,7 +15,7 @@ Works in Claude Code (native hooks), OpenCode (TypeScript plugin adapter at `.op
 
 ```bash
 cargo build --release                                   # build all 3 binaries
-cargo test                                              # all tests (53)
+cargo test                                              # all tests (58)
 cargo test -- test_name                                 # single test
 cargo clippy -- -D warnings                             # lint (pedantic enabled)
 cargo fmt --check                                       # format check
@@ -29,7 +29,7 @@ Three binaries, one library crate. Binaries are thin — they call library funct
 
 ```
 src/lib.rs          → HookInput struct, read_hook_input(), in_data_dir() scope check
-src/config/         → Config loading: YAML deserialization, apply_shared() overlay, path resolution
+src/config/         → Config loading: YAML deserialization via forge-lib deep merge, path resolution
 src/surface/        → Pure parsing: backlog, reminders, ideas, tabs, journal gaps (no I/O)
 src/transcript/     → JSONL transcript analysis: count messages, tool turns, memory writes, insights
 src/prompt/         → Pattern file loading with frontmatter/H1 stripping
@@ -54,7 +54,7 @@ Errors go to stderr via `eprintln!`.
 
 ### Config Precedence
 
-`config.yaml` (gitignored user override) > `defaults.yaml shared:` (project-level) > compiled `Default` impl. The `apply_shared()` method overlays project-level shared paths onto any field still at its compiled default — a `config.yaml` override always wins.
+`config.yaml` (gitignored user override) > module `defaults.yaml` > compiled `Default` impl. Config loaded via forge-lib deep merge (`load_yaml_file` + `merge_values`). The `user.root` field resolves relative paths against `$HOME` at load time.
 
 ### Module Root Discovery
 
@@ -79,9 +79,10 @@ Errors go to stderr via `eprintln!`.
 
 | Crate | Purpose |
 |-------|---------|
-| `forge-core` | Path dep (`../../Core`) — YAML loading, `user_root()`, `ProjectConfig`, `apply_if_default()` |
+| `forge-lib` | Path dep (`lib/`) — `load_yaml_file()`, `merge_values()` for config deep merge |
 | `chrono` | Date parsing and arithmetic |
 | `regex` | Backlog/tab/journal line parsing |
 | `serde` + `serde_json` | Config deserialization, transcript/hook JSON parsing |
+| `serde_yaml` | YAML config deserialization |
 
-Dev: `serde_yaml`, `tempfile`, `assert_cmd`, `predicates`.
+Dev: `tempfile`, `assert_cmd`, `predicates`.
