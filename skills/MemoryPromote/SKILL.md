@@ -43,7 +43,7 @@ Read the specified memory file. Determine the memory type from its parent direct
 If the argument is a title (not a path), search all three memory directories for a matching filename.
 
 Extract:
-- Frontmatter fields (type-specific: `insight`/`origin`, `decision`/`rationale`/`context`, `spark`/`idea`)
+- Frontmatter fields (`description`, `comments`, `sources`, `related`)
 - Body content
 - `keywords:` for context
 
@@ -105,7 +105,7 @@ claude.description: What this agent does
 
 #### Script → `$FORGE_USER_ROOT/<promote.scripts>/<name>.sh`
 
-Generate a shell script following conventions: `set -euo pipefail`, `command` prefix for aliased binaries, `builtin cd` for directory changes.
+Generate a shell script following conventions: `set -euo pipefail`, `command` prefix for aliased commands (`cd`, `cp`, `mv`, `rm`).
 
 #### Auto-memory → `~/.claude/projects/.../memory/MEMORY.md`
 
@@ -124,17 +124,21 @@ After the artifact is successfully written:
    command mv "$source" "$archive_dir/"
    ```
 
-2. Add `promoted:` entry to the archived file's frontmatter:
+2. Add lifecycle entries to `comments:`:
    ```yaml
-   promoted: "[[ArtifactName]]"
+   comments:
+     - "Adopted: into [[ArtifactName]]"
+     - "Archived: moved to Archives/Memory/ on YYYY-MM-DD"
    ```
-   Use a wikilink if the artifact is a vault note. If the artifact is in a module repo (not resolvable in Obsidian), use a GitHub URL instead:
-   ```yaml
-   promoted: https://github.com/user/repo/blob/main/path/to/file.md
-   ```
-   Obsidian does not support nested properties — keep `promoted` as a flat string, not an array of objects.
 
-3. Update the `updated:` date.
+3. Add a commit-pinned permalink to the file that captured the promoted concept to `sources:`:
+   ```yaml
+   sources:
+     - https://github.com/N4M3Z/forge-text/blob/a1b2c3d/skills/Emojify/SKILL.md
+   ```
+   Use `git -C <module> rev-parse HEAD` to get the current commit SHA. Pinning to a commit ensures the link is a permanent snapshot.
+
+4. Update the `updated:` date.
 
 ### Phase 6: Summary
 
@@ -152,8 +156,7 @@ Report:
 - Only promote files from `Memory/{Insights,Imperatives,Ideas}/` — never from Archives or other locations
 - Always archive the source after promotion — Memory/ should only contain unpromoted items
 - Never delete the source — always move to Archives
-- For Ideas: set `status: Adopted` and fill `adopted:` if this is the primary adoption
-- For Imperatives: do not change `status` — an imperative can be Active and also promoted
+- Add `Adopted:` and `Archived:` entries to `comments:` on the source file
 - Multiple promotions from the same item are allowed (user can run MemoryPromote multiple times before archiving, or re-promote from Archives manually)
 
 !`dispatch skill-load forge-reflect`
