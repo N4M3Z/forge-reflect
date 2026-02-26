@@ -36,8 +36,10 @@ fallback_reason: >-
   Substantial session with no insights captured.
   Create a file in Memory/Insights/ or Memory/Imperatives/ before ending.
 precompact_prefix: >-
-  BEFORE COMPACTING - apply the reusability filter below to each insight.
-  Capture reusable patterns as Memory/Insights/ files, let one-off traces compact away.
+  STOP — BEFORE COMPACTING, check for uncaptured insights.
+  Any ★ Insight block in this session that does NOT have a corresponding Memory/Insights/ file
+  MUST be persisted NOW using the Write tool. Do not compact until all insights are captured.
+  Apply the reusability filter below: capture reusable patterns, let one-off traces compact away.
 uncaptured_insight_reason: >-
   Uncaptured insights detected. Rule 12: every ★ Insight block
   MUST be persisted as a Memory/Insights/ file before ending.
@@ -66,6 +68,7 @@ promote:
 # Skill allowlists (provider-keyed, used by install-skills)
 skills:
     claude:
+        ContextKeeper:
         InsightCheck:
         MemoryHarvest:
         MemoryInsights:
@@ -75,6 +78,7 @@ skills:
         Surface:
 
     gemini:
+        ContextKeeper:
         InsightCheck:
         MemoryHarvest:
         MemoryInsights:
@@ -84,6 +88,7 @@ skills:
         Surface:
 
     codex:
+        ContextKeeper:
         InsightCheck:
         MemoryHarvest:
         MemoryInsights:
