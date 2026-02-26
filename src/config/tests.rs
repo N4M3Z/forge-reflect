@@ -13,6 +13,8 @@ fn test_default_values() {
         .any(|name| name == "safe-write"));
     assert_eq!(config.tool_turn_threshold, 10);
     assert_eq!(config.user_msg_threshold, 4);
+    assert_eq!(config.duration_threshold_minutes, 15);
+    assert_eq!(config.user_msg_floor, 2);
     assert_eq!(
         config.reflection,
         "Orchestration/Skills/SessionReflect/SKILL.md"
@@ -44,6 +46,8 @@ fn test_partial_yaml_uses_defaults_for_missing() {
     assert_eq!(config.write_tool_names, vec!["safe-write"]);
     // Missing fields get defaults
     assert_eq!(config.user_msg_threshold, 4);
+    assert_eq!(config.duration_threshold_minutes, 15);
+    assert_eq!(config.user_msg_floor, 2);
     assert_eq!(config.insights_path(), "Memory/Insights/");
     assert_eq!(
         config.memory.imperatives,
@@ -92,6 +96,16 @@ backlog: custom/backlog.md
 }
 
 #[test]
+fn test_duration_threshold_from_yaml() {
+    let yaml = "duration_threshold_minutes: 30\nuser_msg_floor: 5\n";
+    let config: Config = serde_yaml::from_str(yaml).unwrap();
+    assert_eq!(config.duration_threshold_minutes, 30);
+    assert_eq!(config.user_msg_floor, 5);
+    // Other defaults preserved
+    assert_eq!(config.tool_turn_threshold, 10);
+}
+
+#[test]
 fn test_resolve_user_path() {
     let mut config = Config::default();
     config.user.root = "/home/user/vault".to_string();
@@ -120,8 +134,5 @@ fn test_resolve_user_path_absolute_passes_through() {
     config.user.root = "/home/user/vault".to_string();
 
     let result = config.resolve_user_path("/home/user/data", "/absolute/path");
-    assert_eq!(
-        result,
-        std::path::PathBuf::from("/absolute/path")
-    );
+    assert_eq!(result, std::path::PathBuf::from("/absolute/path"));
 }

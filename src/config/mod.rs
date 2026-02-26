@@ -18,6 +18,8 @@ pub struct Config {
     // Substantiality thresholds
     pub tool_turn_threshold: usize,
     pub user_msg_threshold: usize,
+    pub duration_threshold_minutes: u32,
+    pub user_msg_floor: usize,
 
     // Skill file paths (user-root-relative)
     pub reflection: String,
@@ -100,6 +102,8 @@ impl Default for Config {
             ],
             tool_turn_threshold: 10,
             user_msg_threshold: 4,
+            duration_threshold_minutes: 15,
+            user_msg_floor: 2,
             reflection: "Orchestration/Skills/SessionReflect/SKILL.md".to_string(),
             insight_check: "Orchestration/Skills/InsightCheck/SKILL.md".to_string(),
             data_dir_suffix: "Data".to_string(),
@@ -107,7 +111,8 @@ impl Default for Config {
                 Memory/Insights/ or Memory/Imperatives/ before ending."
                 .to_string(),
             precompact_prefix:
-                "BEFORE COMPACTING \u{2014} capture session insights and imperatives now. "
+                "BEFORE COMPACTING - apply the reusability filter below to each insight. \
+                Capture reusable patterns as Memory/Insights/ files, let one-off traces compact away. "
                     .to_string(),
             uncaptured_insight_reason:
                 "Uncaptured insights detected. Rule 12: every \u{2605} Insight block \
@@ -162,7 +167,6 @@ impl Default for SurfaceConfig {
     }
 }
 
-
 impl Config {
     /// Insights path fragment, derived from first element of `memory_paths`.
     /// Used for counting insight file writes in transcript analysis.
@@ -191,14 +195,10 @@ impl Config {
 
         let mut config: Self = if let Ok(root) = module_root {
             let plugin_root = Path::new(&root);
-            let defaults = forge_lib::sidecar::load_yaml_file(
-                &plugin_root.join("defaults.yaml"),
-            )
-            .unwrap_or(serde_yaml::Value::Null);
-            let overlay = forge_lib::sidecar::load_yaml_file(
-                &plugin_root.join("config.yaml"),
-            )
-            .unwrap_or(serde_yaml::Value::Null);
+            let defaults = forge_lib::sidecar::load_yaml_file(&plugin_root.join("defaults.yaml"))
+                .unwrap_or(serde_yaml::Value::Null);
+            let overlay = forge_lib::sidecar::load_yaml_file(&plugin_root.join("config.yaml"))
+                .unwrap_or(serde_yaml::Value::Null);
             let merged = forge_lib::sidecar::merge_values(defaults, overlay);
             serde_yaml::from_value(merged).unwrap_or_else(|e| {
                 eprintln!("forge-reflect: {e}, using defaults");

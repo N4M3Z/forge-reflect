@@ -1,5 +1,6 @@
 use crate::config::Config;
 use serde_json::Value;
+use std::collections::HashSet;
 
 pub struct TranscriptAnalysis {
     pub user_messages: usize,
@@ -11,6 +12,8 @@ pub struct TranscriptAnalysis {
     pub insight_topics: Vec<String>,
     /// List of filenames written to the insights directory.
     pub insights_written: Vec<String>,
+    /// Session duration in minutes (last timestamp - first timestamp). 0 if unavailable.
+    pub session_duration_minutes: u64,
 }
 
 /// Analyze transcript for user messages, tool-using turns, memory writes, and insights.
@@ -23,13 +26,17 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
         insights_write_count: 0,
         insight_topics: Vec::new(),
         insights_written: Vec::new(),
+        session_duration_minutes: 0,
     };
+
+    let mut first_timestamp: Option<chrono::DateTime<chrono::FixedOffset>> = None;
+    let mut last_timestamp: Option<chrono::DateTime<chrono::FixedOffset>> = None;
 
     // Regex to find ★ Insight blocks and capture the topic.
     // Anchored to line-start ((?m)^) so prose ABOUT insights doesn't match.
     // Matches "★ Insight: Topic" and "★ Insight Topic" at start of line.
     let insight_re = regex::Regex::new(&format!(
-        r"(?m)^\s*{}\s*:?\s*(.*)",
+        r"(?m)^\s*`*\s*{}\s*:?\s*(.*)",
         regex::escape(&config.insight_marker)
     ))
     .expect("insight marker regex must compile");
@@ -39,6 +46,15 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
             Ok(v) => v,
             Err(_) => continue,
         };
+
+        if let Some(ts_str) = entry.get("timestamp").and_then(Value::as_str) {
+            if let Ok(ts) = chrono::DateTime::parse_from_rfc3339(ts_str) {
+                if first_timestamp.is_none() {
+                    first_timestamp = Some(ts);
+                }
+                last_timestamp = Some(ts);
+            }
+        }
 
         if is_user_entry(&entry) {
             analysis.user_messages += 1;
@@ -55,9 +71,12 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
             for item in content {
                 if let Some(text) = extract_text(item) {
                     for cap in insight_re.captures_iter(text) {
+                        let topic = cap[1].trim().trim_end_matches('`').trim();
+                        if !topic.is_empty() && is_decorative(topic) {
+                            continue;
+                        }
                         analysis.insight_count += 1;
-                        let topic = cap[1].trim();
-                        if !topic.is_empty() && !is_decorative(topic) {
+                        if !topic.is_empty() && topic.split_whitespace().count() >= 2 {
                             analysis.insight_topics.push(topic.to_string());
                         }
                     }
@@ -75,34 +94,31 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
                     .write_tool_names
                     .iter()
                     .any(|name| name.eq_ignore_ascii_case(tool_name));
-                if !is_write_tool {
-                    continue;
-                }
 
-                let Some(file_path) = extract_file_path(item) else {
+                let file_path = if is_write_tool {
+                    extract_file_path(item)
+                } else if tool_name == "Bash" {
+                    extract_bash_command(item).and_then(extract_safe_write_path)
+                } else {
+                    None
+                };
+
+                let Some(file_path) = file_path else {
                     continue;
                 };
 
-                if file_path.contains(config.insights_path()) {
-                    analysis.insights_write_count += 1;
-                    if let Some(filename) = std::path::Path::new(&file_path).file_name() {
-                        analysis
-                            .insights_written
-                            .push(filename.to_string_lossy().into_owned());
-                    }
-                }
-
-                for memory_path in &config.memory_paths {
-                    if file_path.contains(memory_path.as_str()) {
-                        analysis.has_memory_write = true;
-                    }
-                }
+                check_memory_paths(&mut analysis, &file_path, config);
             }
         }
 
         if turn_has_tool_use {
             analysis.tool_using_turns += 1;
         }
+    }
+
+    if let (Some(first), Some(last)) = (first_timestamp, last_timestamp) {
+        let duration = last.signed_duration_since(first);
+        analysis.session_duration_minutes = u64::try_from(duration.num_minutes()).unwrap_or(0);
     }
 
     analysis
@@ -175,6 +191,52 @@ fn extract_file_path(item: &Value) -> Option<String> {
     }
 
     None
+}
+
+fn extract_bash_command(item: &Value) -> Option<&str> {
+    item.get("input")
+        .and_then(|i| i.get("command"))
+        .and_then(Value::as_str)
+}
+
+fn extract_safe_write_path(command: &str) -> Option<String> {
+    let re = regex::Regex::new(r#"safe-write\s+(?:write|edit|insert)\s+"?([^"\n]+)"?"#)
+        .expect("safe-write regex must compile");
+    re.captures(command)
+        .and_then(|cap| cap.get(1))
+        .map(|m| m.as_str().to_string())
+}
+
+fn check_memory_paths(analysis: &mut TranscriptAnalysis, file_path: &str, config: &Config) {
+    if file_path.contains(config.insights_path()) {
+        analysis.insights_write_count += 1;
+        if let Some(filename) = std::path::Path::new(file_path).file_name() {
+            analysis
+                .insights_written
+                .push(filename.to_string_lossy().into_owned());
+        }
+    }
+
+    for memory_path in &config.memory_paths {
+        if file_path.contains(memory_path.as_str()) {
+            analysis.has_memory_write = true;
+        }
+    }
+}
+
+/// Match insight topic to written filename using word-token overlap.
+/// Splits both on non-alphanumeric boundaries, requires at least one
+/// shared token of length >= 4 characters. Case-insensitive.
+pub fn topic_matches_filename(topic: &str, filename: &str) -> bool {
+    let topic_tokens: HashSet<&str> = topic
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|t| t.len() >= 4)
+        .collect();
+    let file_tokens: HashSet<&str> = filename
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|t| t.len() >= 4)
+        .collect();
+    topic_tokens.intersection(&file_tokens).next().is_some()
 }
 
 /// Returns true if the string is purely decorative box-drawing or border characters.

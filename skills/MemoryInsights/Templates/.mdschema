@@ -1,0 +1,24 @@
+frontmatter:
+    fields:
+        - name: tags
+          type: array
+        - name: description
+        - name: collection
+          type: string
+        - name: icon
+          type: string
+        - name: cssclasses
+          type: array
+        - name: sources
+          type: array
+
+structure:
+    - heading: "## Log"
+      optional: true
+      allow_additional: true
+      lists:
+          - type: unordered
+
+heading_rules:
+    no_skip_levels: true
+    max_depth: 3

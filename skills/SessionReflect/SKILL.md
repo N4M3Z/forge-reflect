@@ -7,6 +7,20 @@ description: Interactive session reflection — capture decisions, insights, ide
 
 Interactive end-of-session (or mid-session) reflection. Reviews what happened in the conversation, proposes imperatives/insights/ideas to capture, asks the user to confirm or adjust, writes memory files, and logs effort to the daily journal.
 
+## Reusability Filter
+
+For EACH insight, apply the REUSABILITY test — will I encounter this again?
+
+If YES: (1) strip project-specific names, paths, line numbers,
+(2) extract the transferable principle or reusable pattern,
+(3) phrase it so it helps in ANY future project.
+
+If NO (one-off debug trace, specific fix): skip it.
+
+Example: "forge-lib deep merge fails on arrays" becomes
+"YAML deep merge libraries typically replace arrays, not append —
+test array merge behavior explicitly."
+
 ## Instructions
 
 Follow these phases IN ORDER. Every phase that needs user input MUST use AskUserQuestion with pre-guessed options. The user can always select "Other" for free-text input.
@@ -52,9 +66,9 @@ Look back through the current conversation and identify:
 #### Step 2.2: Draft proposals
 
 For each item identified, draft:
-- **Imperatives**: title, context, decision, rationale
-- **Insights**: title, origin, insight, actionable rule
-- **Ideas**: title, spark, idea description
+- **Imperatives**: title, description (the rule), context, rationale
+- **Insights**: title, description (the finding), context (origin)
+- **Ideas**: title, description (the proposal), spark
 - **Effort entries**: project, duration tag, description
 - **Backlog items**: description, priority
 
@@ -78,10 +92,11 @@ If any insights were identified, present them the same way:
 
 For each proposed insight (up to 4 per batch):
 - Show the proposed title and insight
-- **Options**: "Capture it", "Adjust — let me refine", "Skip — already known"
+- Apply the REUSABILITY test (see filter above) — skip one-off debug traces
+- **Options**: "Capture it", "Adjust — let me refine", "Skip — not reusable"
 
 For adjustments, ask:
-- "What's the actionable takeaway? What should future-you remember?"
+- "What's the transferable principle? What should any project learn from this?"
 
 #### Step 3.3: Present ideas
 
@@ -113,78 +128,44 @@ For each proposed item (up to 4 per batch):
 
 For each confirmed imperative, create a file at `<memory_imperatives_path>/Title.md`:
 
-```yaml
-title: Short descriptive title
-aliases: []
-tags:
-  - type/memory/imperative
-keywords:
-  - "[[Topic]]"
-collection: "[[Orchestration/Memory/Imperatives/Imperatives|Imperatives]]"
-icon: LiShield
-cssclasses:
-  - memory
-created: YYYY-MM-DD HH:mm Z
-updated:
-related: []
-context: What prompted this imperative
-decision: What was decided
-rationale: Why this approach was chosen
-status: Active
-superseded:
+Use `Templates/Imperative.md` as the base. Fill in frontmatter, then complete the `## Log` entries:
+
+```markdown
+## Log
+
+- [#] YYYY-MM-DD what prompted this imperative #log/context/background
+- [#] YYYY-MM-DD why this approach was chosen #log/context/rationale
 ```
 
-Body (under `## Context` heading) = expanded detail where frontmatter fields are too brief.
+Body = expanded detail — the actionable rule, examples, or reasoning that doesn't fit in `description:`.
 
 #### Step 4.2: Create insight files
 
 For each confirmed insight, create a file at `<memory_insights_path>/Title.md`:
 
-```yaml
-title: Short descriptive title
-aliases: []
-tags:
-  - type/memory/insight
-keywords:
-  - "[[Topic]]"
-collection: "[[Orchestration/Memory/Insights/Insights|Insights]]"
-icon: LiLightbulb
-cssclasses:
-  - memory
-created: YYYY-MM-DD HH:mm Z
-updated:
-related: []
-origin: Where the learning came from
-insight: Concise factual finding
+Use `Templates/Insight.md` as the base. Fill in frontmatter, then complete the `## Log` entry:
+
+```markdown
+## Log
+
+- [#] YYYY-MM-DD where the learning came from #log/context/background
 ```
 
-Body (under `## Context` heading) = the rule (actionable takeaway, verbose enough for future-self).
+Body = the actionable takeaway — verbose enough for future-self to act on without re-reading the original session.
 
 #### Step 4.3: Create idea files
 
 For each confirmed idea, create a file at `<memory_ideas_path>/Title.md`:
 
-```yaml
-title: Short descriptive title
-aliases: []
-tags:
-  - type/memory/idea
-keywords:
-  - "[[Topic]]"
-collection: "[[Orchestration/Memory/Ideas/Ideas|Ideas]]"
-icon: LiSparkles
-cssclasses:
-  - memory
-created: YYYY-MM-DD HH:mm Z
-updated:
-related: []
-spark: What prompted this idea
-idea: Concise description of the proposal
-status: Open
-adopted:
+Use `Templates/Idea.md` as the base. Fill in frontmatter, then complete the `## Log` entry:
+
+```markdown
+## Log
+
+- [#] YYYY-MM-DD what prompted this idea #log/context/origin
 ```
 
-Body (under `## Context` heading) = expanded detail, potential approaches, considerations.
+Body = expanded detail, potential approaches, considerations.
 
 ### Phase 5: Update Daily Log & Backlog
 

@@ -1,11 +1,12 @@
 ---
 name: MemoryHarvest
-description: Scan memory for promotion candidates — insights, imperatives, and ideas that could become steering rules, skills, agents, or scripts. USE WHEN reviewing accumulated memory for actionable patterns, operationalizing learnings, or asking what memory items are ready to promote.
+description: Mine conversation exports for new memory items — scan ChatGPT exports, Claude Code transcripts, or other conversation logs for insights, imperatives, and ideas worth capturing. USE WHEN harvesting learnings from chat history, extracting patterns from ChatGPT, mining conversation exports.
+argument-hint: "[path to export or transcript]"
 ---
 
 # Memory Harvest
 
-Scan all memory directories for items that could be promoted into actionable artifacts. Everything in `Memory/` is an unpromoted candidate (promoted items live in `Archives/Memory/`).
+Scan conversation history for patterns, decisions, and learnings worth capturing as memory items. Sources include ChatGPT exports (JSON/markdown in `Inbox/`), Claude Code session transcripts, and other conversation logs.
 
 ## Instructions
 
@@ -23,56 +24,53 @@ cat $MODULE/defaults.yaml
 ```
 
 Store memory paths (user-root-relative, resolve via `FORGE_USER_ROOT`):
-- `memory: insights:`, `memory: imperatives:`, `memory: ideas:` — source directories
+- `memory: insights:`, `memory: imperatives:`, `memory: ideas:` — target directories for captured items
 
-### Phase 2: Scan Memory
+### Phase 2: Locate Source
 
-Use Glob to list all `.md` files in the three memory directories (exclude folder notes and index files).
+Identify the conversation source:
+- **ChatGPT export**: JSON or markdown file in `Inbox/` or user-specified path
+- **Claude Code transcript**: JSONL file in `~/.claude/projects/` (use `/Sessions` to find specific sessions)
+- **Other**: any structured conversation log the user provides
 
-Count totals per type for the user's awareness.
+Read the source content. For large files, scan in chunks and summarize.
 
-### Phase 3: Read Candidates
+### Phase 3: Extract Candidates
 
-Read the frontmatter (first ~20 lines) of each candidate. Extract:
-- `title:` — display name
-- `keywords:` — for clustering
-- `status:` — for imperatives (Active/Superseded) and ideas (Open/Exploring/Adopted/Dismissed)
-- `insight:` or `decision:` or `idea:` — the core content for recommendation
+Scan the conversation for:
+- **Insights** — recurring patterns, discovered conventions, tool behaviors, surprising findings
+- **Imperatives** — behavioral rules derived from failures ("always X", "never Y")
+- **Ideas** — proposals, future possibilities, unfinished threads worth tracking
 
-For large sets, prioritize:
-1. **Imperatives with `status: Active`** — behavioral rules ready to codify
-2. **Ideas with `status: Adopted` or `Exploring`** — well-specced and ready to act on
-3. **Insights** — sort by age if many, oldest first (longest unacted-on)
+For each candidate, draft:
+- `title:` — concise, noun-phrase
+- `description:` — one-line summary
+- `## Log` entries with appropriate `#log/*` tags
+- Relevant `keywords:` wikilinks
+- Body content with enough context for future-self to act without re-reading the original conversation
 
-### Phase 4: Group and Recommend
+### Phase 4: Present Candidates
 
-Group candidates by:
-1. **Keyword clusters** — items sharing the same `keywords:` wikilinks (e.g., multiple items about `[[Bash Scripting]]` suggest a consolidated steering rule or skill)
-2. **Destination affinity** — group by recommended landing zone:
-   - Behavioral rules → Steering
-   - Procedures → Skills
-   - Agent tweaks → Agents
-   - Tool gotchas → Auto-memory
+Show each extracted candidate with its proposed content. Present via `AskUserQuestion` in batches (up to 4 per question):
+- **Capture as Insight** — create in `Memory/Insights/`
+- **Capture as Imperative** — create in `Memory/Imperatives/`
+- **Capture as Idea** — create in `Memory/Ideas/`
+- **Skip** — not worth capturing
 
-Present grouped candidates to the user with:
-- The item title and one-line summary (from `insight:`/`decision:`/`idea:`)
-- Recommended destination type
-- Keyword cluster context (if applicable)
+### Phase 5: Create Memory Items
 
-### Phase 5: User Selection
+For approved candidates, create files from the type templates (`Templates/*.md`, validated by `Templates/.mdschema`):
+- Insights: `Templates/Insight.md` — `## Log` seeded with `#log/context/background`
+- Imperatives: `Templates/Imperative.md` — `## Log` seeded with `#log/context/background` + `#log/context/rationale`
+- Ideas: `Templates/Idea.md` — `## Log` seeded with `#log/context/origin`
 
-Ask the user which items to promote via AskUserQuestion. Options per item or group:
-- **Promote** — proceed to `/MemoryPromote`
-- **Skip** — leave in Memory for now
-- **Dismiss** — (ideas only) mark as `status: Dismissed`
-
-For selected items, invoke `/MemoryPromote` for each.
+All types share: `cssclasses: [memory]`, `upstream: [[Memory]]`, `created:` and `updated:` timestamps.
 
 ## Constraints
 
-- Only scan `Memory/{Insights,Imperatives,Ideas}/` — never scan Archives
-- Do not modify memory files during harvest — modifications happen in `/MemoryPromote`
-- If no candidates found, report that Memory is clean and suggest running `/SessionReflect` to capture new learnings
-- For very large sets (50+ candidates), present a summary first and let the user filter by type or keyword before showing details
+- Never modify the source conversation — it's read-only input
+- Deduplicate against existing memory — check if a similar insight/imperative/idea already exists before creating
+- Use `safe-read` for AMBER vault files, regular Read for everything else
+- If the source is very large (>1000 lines), summarize sections first and let the user direct which sections to mine
 
 !`dispatch skill-load forge-reflect`

@@ -22,7 +22,7 @@ pub struct HookInput {
     #[arg(long, default_value = "")]
     pub cwd: String,
 
-    /// Path to session transcript JSONL (Stop hooks only).
+    /// Path to session transcript JSONL (Stop and `PreCompact` hooks).
     #[serde(default)]
     #[arg(long, default_value = "")]
     pub transcript_path: String,

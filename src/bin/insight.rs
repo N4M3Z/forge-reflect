@@ -1,5 +1,4 @@
 use forge_reflect::config::Config;
-use forge_reflect::prompt;
 use forge_reflect::transcript;
 use std::fs;
 use std::process::ExitCode;
@@ -41,38 +40,45 @@ fn main() -> ExitCode {
 
     let analysis = transcript::analyze_transcript(&transcript, &config);
 
+    // Substantiality gate — mirrors reflect.rs thresholds.
+    // Short sessions pass through without insight enforcement.
+    if analysis.user_messages < config.user_msg_threshold
+        || analysis.tool_using_turns < config.tool_turn_threshold
+    {
+        eprintln!(
+            "forge-reflect[insight]: session not substantial ({} msgs, {} tool turns), allowing",
+            analysis.user_messages, analysis.tool_using_turns
+        );
+        return ExitCode::SUCCESS;
+    }
+
     let mut uncaptured_topics = Vec::new();
     for topic in &analysis.insight_topics {
         let topic_lower = topic.to_lowercase();
-        let mut matched = false;
-        for written in &analysis.insights_written {
+        let matched = analysis.insights_written.iter().any(|written| {
             let written_base = written
                 .strip_suffix(".md")
                 .unwrap_or(written)
                 .to_lowercase();
-            // Match if topic is in filename or vice versa, or if they share significant overlap
-            if written_base.contains(&topic_lower) || topic_lower.contains(&written_base) {
-                matched = true;
-                break;
-            }
-        }
+            transcript::topic_matches_filename(&topic_lower, &written_base)
+        });
         if !matched {
             uncaptured_topics.push(topic.as_str());
         }
     }
 
-    // Handle cases where markers exist but no topics were extracted
-    let unnamed_uncaptured = analysis
+    // Insight markers without extracted topics (decorative format, no colon)
+    let unnamed_insights = analysis
         .insight_count
-        .saturating_sub(analysis.insight_topics.len())
-        .saturating_sub(
-            analysis.insights_write_count.saturating_sub(
-                analysis
-                    .insight_topics
-                    .len()
-                    .saturating_sub(uncaptured_topics.len()),
-            ),
-        );
+        .saturating_sub(analysis.insight_topics.len());
+    // Named topics that matched a written file
+    let named_matched = analysis
+        .insight_topics
+        .len()
+        .saturating_sub(uncaptured_topics.len());
+    // Writes beyond those accounted for by named matches
+    let surplus_writes = analysis.insights_write_count.saturating_sub(named_matched);
+    let unnamed_uncaptured = unnamed_insights.saturating_sub(surplus_writes);
 
     // Final uncaptured count
     let total_uncaptured = uncaptured_topics.len() + unnamed_uncaptured;
@@ -85,24 +91,10 @@ fn main() -> ExitCode {
             reason_detail = format!(" ({unnamed_uncaptured} unnamed)");
         }
 
+        // Warn only — never block exit for uncaptured insights.
         eprintln!(
-            "forge-reflect[insight]: blocking — {total_uncaptured} uncaptured insight(s){reason_detail}"
+            "forge-reflect[insight]: warn - {total_uncaptured} uncaptured insight(s){reason_detail}"
         );
-        let skill_path = config.resolve_user_path(&cwd, &config.insight_check);
-        let base_reason = prompt::load_pattern_abs(&skill_path)
-            .unwrap_or_else(|| config.uncaptured_insight_reason.clone());
-
-        let reason = format!(
-            "{} ({} uncaptured insight(s){})",
-            base_reason.trim(),
-            total_uncaptured,
-            reason_detail
-        );
-        let output = serde_json::json!({
-            "decision": "block",
-            "reason": reason
-        });
-        println!("{output}");
     }
 
     ExitCode::SUCCESS

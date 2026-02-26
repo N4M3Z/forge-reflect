@@ -58,6 +58,7 @@ Content-to-destination heuristics:
 - **Debugging patterns**, API quirks, tool gotchas, environment facts → **Auto-memory** (MEMORY.md)
 - **Reusable automation** candidates, shell one-liners → **Script** (`promote.scripts`)
 - **Vault structure** or format rules → **Convention** (module CONVENTIONS.md)
+- **Structural must-hold properties**, system-breaks-if-violated constraints → **Invariant** (`promote.invariants` note + wikilink in ARCHITECTURE.md or CONVENTIONS.md `## Invariants`)
 
 The user may choose a different destination than recommended, or promote to multiple destinations.
 
@@ -115,6 +116,24 @@ Append a concise entry to the appropriate section of MEMORY.md. Follow the exist
 
 Propose an edit to the relevant module's CONVENTIONS.md. Show the proposed addition and confirm with the user before writing.
 
+#### Invariant → `$FORGE_USER_ROOT/<promote.invariants>/<Name>.md` + ARCHITECTURE.md
+
+Create a standalone invariant note with frontmatter:
+```yaml
+---
+title: <Invariant Name>
+tags:
+  - type/invariant
+description: <One-line: what must hold and what breaks if violated>
+enforced_by: <linter, schema, CI step, or "manual review">
+scope: "[[ModuleName]]"
+---
+```
+
+Body explains the constraint, why it exists, and how it's enforced.
+
+Then add a `[[InvariantName]]` wikilink to the relevant ARCHITECTURE.md or CONVENTIONS.md under a `## Invariants` section (create the section if it doesn't exist).
+
 ### Phase 5: Archive Source
 
 After the artifact is successfully written:
@@ -124,11 +143,9 @@ After the artifact is successfully written:
    command mv "$source" "$archive_dir/"
    ```
 
-2. Add lifecycle entries to `comments:`:
-   ```yaml
-   comments:
-     - "Adopted: into [[ArtifactName]]"
-     - "Archived: moved to Archives/Memory/ on YYYY-MM-DD"
+2. Add lifecycle entries to `## Log`:
+   ```markdown
+   - [#] YYYY-MM-DD Promoted to [[ArtifactName]] #log/decision/adopted
    ```
 
 3. Add a commit-pinned permalink to the file that captured the promoted concept to `sources:`:
@@ -156,7 +173,7 @@ Report:
 - Only promote files from `Memory/{Insights,Imperatives,Ideas}/` — never from Archives or other locations
 - Always archive the source after promotion — Memory/ should only contain unpromoted items
 - Never delete the source — always move to Archives
-- Add `Adopted:` and `Archived:` entries to `comments:` on the source file
+- Add `#log/decision/adopted` entry to `## Log` on the source file
 - Multiple promotions from the same item are allowed (user can run MemoryPromote multiple times before archiving, or re-promote from Archives manually)
 
 !`dispatch skill-load forge-reflect`

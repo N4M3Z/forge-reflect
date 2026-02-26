@@ -36,6 +36,22 @@ fn make_human() -> String {
     serde_json::json!({ "type": "human" }).to_string()
 }
 
+fn make_assistant_bash(command: &str) -> String {
+    serde_json::json!({
+        "type": "assistant",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "Bash",
+                    "input": { "command": command }
+                }
+            ]
+        }
+    })
+    .to_string()
+}
+
 fn make_codex_user() -> String {
     serde_json::json!({
         "role": "user",
@@ -74,7 +90,8 @@ fn test_counts_insight_markers() {
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
-    assert_eq!(analysis.insight_count, 2);
+    // Decorative markers (★ Insight ─) are skipped entirely — not counted.
+    assert_eq!(analysis.insight_count, 0);
     assert_eq!(analysis.insights_write_count, 0);
     assert_eq!(analysis.user_messages, 2);
 }
@@ -104,7 +121,8 @@ fn test_insight_with_matching_insight_file() {
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
-    assert_eq!(analysis.insight_count, 1);
+    // ★ Insight ─ is decorative — not counted as an insight.
+    assert_eq!(analysis.insight_count, 0);
     assert_eq!(analysis.insights_write_count, 1);
     assert!(analysis.has_memory_write);
 }
@@ -120,6 +138,37 @@ fn test_no_insights_no_block() {
     let analysis = analyze_transcript(&transcript, &cfg());
     assert_eq!(analysis.insight_count, 0);
     assert_eq!(analysis.insights_write_count, 0);
+}
+
+// ─── Backtick-wrapped insight markers ───
+
+#[test]
+fn test_backtick_wrapped_insight_marker() {
+    let transcript = [
+        make_human(),
+        make_assistant_text(
+            "`\u{2605} Insight \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}`\nSomething learned\n`\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}`",
+        ),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    // Backtick-wrapped decorative border → skipped entirely.
+    assert_eq!(analysis.insight_count, 0);
+    assert!(analysis.insight_topics.is_empty());
+}
+
+#[test]
+fn test_backtick_insight_with_topic() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("`\u{2605} Insight: Important Topic`"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.insight_topics, vec!["Important Topic"]);
 }
 
 // ─── Memory write classification ───
@@ -217,6 +266,64 @@ fn test_safe_write_name_is_treated_as_write() {
     assert!(analysis.has_memory_write);
 }
 
+// ─── Bash-tool safe-write detection ───
+
+#[test]
+fn test_bash_safe_write_detected_as_memory_write() {
+    let transcript = [
+        make_human(),
+        make_assistant_bash(
+            "cat <<'EOF' | safe-write write \"/Users/test/Data/Vaults/Personal/Orchestration/Memory/Imperatives/Test.md\"\ncontent\nEOF\n",
+        ),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.tool_using_turns, 1);
+    assert!(analysis.has_memory_write);
+}
+
+#[test]
+fn test_bash_safe_write_to_insights_counted() {
+    let transcript = [
+        make_human(),
+        make_assistant_bash(
+            "cat <<'EOF' | safe-write write \"Memory/Insights/Important Finding.md\"\ncontent\nEOF\n",
+        ),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insights_write_count, 1);
+    assert_eq!(analysis.insights_written, vec!["Important Finding.md"]);
+    assert!(analysis.has_memory_write);
+}
+
+#[test]
+fn test_bash_safe_write_edit_detected() {
+    let transcript = [
+        make_human(),
+        make_assistant_bash(
+            "safe-write edit \"Memory/Insights/Topic.md\" --old \"foo\" --new \"bar\"",
+        ),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insights_write_count, 1);
+    assert!(analysis.has_memory_write);
+}
+
+#[test]
+fn test_bash_non_safe_write_ignored() {
+    let transcript = [make_human(), make_assistant_bash("ls -la /tmp")].join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.tool_using_turns, 1);
+    assert!(!analysis.has_memory_write);
+    assert_eq!(analysis.insights_write_count, 0);
+}
+
 #[test]
 fn test_non_write_tool_does_not_count_memory_write() {
     let transcript = [
@@ -252,9 +359,8 @@ fn test_decorative_border_not_extracted_as_topic() {
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
-    // Marker still counts as an insight
-    assert_eq!(analysis.insight_count, 1);
-    // But the decorative border is NOT pushed as a topic
+    // Decorative border → skipped entirely, not counted at all.
+    assert_eq!(analysis.insight_count, 0);
     assert!(analysis.insight_topics.is_empty());
 }
 
@@ -280,4 +386,142 @@ fn test_is_decorative() {
     assert!(!is_decorative("Real topic"));
     assert!(!is_decorative("\u{2500} mixed text"));
     assert!(!is_decorative(""));
+}
+
+// ─── Topic-to-filename matching ───
+
+#[test]
+fn test_topic_matches_filename_exact_words() {
+    assert!(topic_matches_filename("yaml deep merge", "yaml-deep-merge"));
+    assert!(topic_matches_filename(
+        "rust compiler performance",
+        "rust-compiler-performance"
+    ));
+}
+
+#[test]
+fn test_topic_matches_filename_partial_overlap() {
+    assert!(topic_matches_filename(
+        "yaml deep merge arrays",
+        "yaml-deep-merge"
+    ));
+    assert!(topic_matches_filename(
+        "forge module alignment",
+        "module-alignment-patterns"
+    ));
+}
+
+#[test]
+fn test_topic_matches_filename_no_match() {
+    assert!(!topic_matches_filename(
+        "rust compiler performance",
+        "yaml-deep-merge"
+    ));
+    assert!(!topic_matches_filename(
+        "session reflection",
+        "compiler-optimizations"
+    ));
+}
+
+#[test]
+fn test_topic_matches_filename_short_tokens_ignored() {
+    // Tokens shorter than 4 chars are ignored — "the", "a", "is" don't count
+    assert!(!topic_matches_filename("the fix is in", "the fix is out"));
+    // But "fix" alone (3 chars) doesn't count — need a 4+ char match
+    assert!(!topic_matches_filename("fix bug", "fix error"));
+}
+
+#[test]
+fn test_topic_matches_filename_case_insensitive_via_lowered_input() {
+    // Callers pass lowercased strings
+    assert!(topic_matches_filename("yaml deep merge", "yaml-deep-merge"));
+}
+
+// ─── Single-word topic filtering ───
+
+#[test]
+fn test_single_word_topic_filtered() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: refactor"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insight_count, 1);
+    assert!(analysis.insight_topics.is_empty());
+}
+
+#[test]
+fn test_multi_word_topic_kept() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: forge module alignment"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.insight_topics, vec!["forge module alignment"]);
+}
+
+// --- Session duration ---
+
+fn make_timestamped_human(ts: &str) -> String {
+    serde_json::json!({ "type": "human", "timestamp": ts }).to_string()
+}
+
+fn make_timestamped_assistant(ts: &str, text: &str) -> String {
+    serde_json::json!({
+        "type": "assistant",
+        "timestamp": ts,
+        "message": {
+            "content": [{ "type": "text", "text": text }]
+        }
+    })
+    .to_string()
+}
+
+#[test]
+fn test_session_duration_from_timestamps() {
+    let transcript = [
+        make_timestamped_human("2026-02-26T10:00:00+01:00"),
+        make_timestamped_assistant("2026-02-26T10:05:00+01:00", "hello"),
+        make_timestamped_human("2026-02-26T10:20:00+01:00"),
+        make_timestamped_assistant("2026-02-26T10:30:00+01:00", "done"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.session_duration_minutes, 30);
+    assert_eq!(analysis.user_messages, 2);
+}
+
+#[test]
+fn test_session_duration_zero_without_timestamps() {
+    let transcript = [make_human(), make_assistant_text("no timestamps here")].join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.session_duration_minutes, 0);
+}
+
+#[test]
+fn test_session_duration_single_timestamp() {
+    let transcript = [make_timestamped_human("2026-02-26T10:00:00+01:00")].join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.session_duration_minutes, 0);
+}
+
+#[test]
+fn test_session_duration_ignores_bad_timestamps() {
+    let transcript = [
+        serde_json::json!({ "type": "human", "timestamp": "not-a-date" }).to_string(),
+        make_timestamped_human("2026-02-26T10:00:00+01:00"),
+        make_timestamped_assistant("2026-02-26T10:45:00+01:00", "done"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.session_duration_minutes, 45);
 }
