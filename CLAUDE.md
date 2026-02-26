@@ -33,7 +33,7 @@ src/config/         → Config loading: YAML deserialization via forge-lib deep 
 src/surface/        → Pure parsing: backlog, reminders, ideas, tabs, journal gaps (no I/O)
 src/transcript/     → JSONL transcript analysis: count messages, tool turns, memory writes, insights
 src/prompt/         → Pattern file loading with frontmatter/H1 stripping
-src/bin/surface.rs  → SessionStart digest (ideas + rediscovery pool)
+src/bin/surface.rs  → PostToolUse digest (ideas + rediscovery pool, via dispatch)
 src/bin/insight.rs  → Stop hook: hard rule — blocks if ★ Insight blocks lack corresponding files
 src/bin/reflect.rs  → Stop hook: soft heuristic — blocks if substantial session has no memory writes
                       Also handles PreCompact (injects reflection prompt)
@@ -43,12 +43,17 @@ src/bin/reflect.rs  → Stop hook: soft heuristic — blocks if substantial sess
 
 `stop.sh` chains two binaries sequentially: `insight` (hard rule, always applies) → `reflect` (soft heuristic, only if insight passes). Both read the same JSON payload from stdin. First to produce stdout JSON wins.
 
+### Hook Chain (PostToolUse event)
+
+`PostToolUse.sh` is a one-shot hook: on the first forge-journals skill invocation per session, it runs the `surface` binary and returns `{"systemMessage":"..."}` for user-visible display. A PPID-scoped guard file (`/tmp/forge-surface-shown-$PPID`) prevents repeat firing. Skill filtering (case match on `tool_input.skill`) ensures it only fires for journals skills.
+
 ### Hook Contract
 
 All binaries always exit 0. Communication is via stdout JSON:
 - Empty stdout = allow
 - `{"decision":"block","reason":"..."}` = block (Stop)
 - `{"additionalContext":"..."}` = inject (PreCompact)
+- `{"hookSpecificOutput":{"additionalContext":"..."}}` = AI context injection (PostToolUse)
 
 Errors go to stderr via `eprintln!`.
 

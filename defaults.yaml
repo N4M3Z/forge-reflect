@@ -21,6 +21,8 @@ write_tool_names:
 # Substantiality thresholds
 tool_turn_threshold: 10
 user_msg_threshold: 4
+duration_threshold_minutes: 15
+user_msg_floor: 2
 
 # Skill file paths (user-root-relative)
 reflection: Orchestration/Skills/SessionReflect/SKILL.md
@@ -33,7 +35,9 @@ data_dir_suffix: Data
 fallback_reason: >-
   Substantial session with no insights captured.
   Create a file in Memory/Insights/ or Memory/Imperatives/ before ending.
-precompact_prefix: "BEFORE COMPACTING \u2014 capture session insights and imperatives now. "
+precompact_prefix: >-
+  BEFORE COMPACTING - apply the reusability filter below to each insight.
+  Capture reusable patterns as Memory/Insights/ files, let one-off traces compact away.
 uncaptured_insight_reason: >-
   Uncaptured insights detected. Rule 12: every ★ Insight block
   MUST be persisted as a Memory/Insights/ file before ending.
@@ -55,6 +59,7 @@ promote:
   steering: Orchestration/Steering
   skills: Orchestration/Skills
   agents: Orchestration/Agents
+  invariants: Orchestration/Invariants
   scripts: Scratch
   archive: Archives/Memory
 
@@ -65,6 +70,7 @@ skills:
         MemoryHarvest:
         MemoryInsights:
         MemoryPromote:
+        MemoryReview:
         SessionReflect:
         Surface:
 
@@ -73,6 +79,7 @@ skills:
         MemoryHarvest:
         MemoryInsights:
         MemoryPromote:
+        MemoryReview:
         SessionReflect:
         Surface:
 
@@ -81,10 +88,11 @@ skills:
         MemoryHarvest:
         MemoryInsights:
         MemoryPromote:
+        MemoryReview:
         SessionReflect:
         Surface:
 
-# Surfacing (SessionStart digest)
+# Surfacing (PostToolUse digest — injected via additionalContext)
 surface:
   archive_dir: Resources/Archives
   archive_prefix: "Safari Tab Snapshot"
@@ -92,3 +100,6 @@ surface:
   ideas_cutoff_days: 14
   due_soon_days: 3
   max_items: 5
+  post_tool_use_prompt: >-
+    Display this surface digest VERBATIM to the user.
+    Do not summarize, reframe, or skip any items.

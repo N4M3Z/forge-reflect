@@ -2,7 +2,7 @@ name: forge-reflect
 version: 0.3.0
 description: Session reflection — surface digest at start, memory capture enforcement at stop
 events:
-  - SessionStart
+  - PostToolUse
   - Stop
   - PreCompact
 metadata:

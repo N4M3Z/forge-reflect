@@ -1,1 +1,0 @@
-Show the surface output to the user — present every item as-is. Surface is for serendipity and rediscovery, not task management. If something sparks curiosity or conversation, follow the thread. Don't turn it into a to-do list or action plan.
