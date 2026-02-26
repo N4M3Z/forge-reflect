@@ -45,7 +45,7 @@ src/bin/reflect.rs  → Stop hook: soft heuristic — blocks if substantial sess
 
 ### Hook Chain (PostToolUse event)
 
-`PostToolUse.sh` is a one-shot hook: on the first forge-journals skill invocation per session, it runs the `surface` binary and returns `{"systemMessage":"..."}` for user-visible display. A PPID-scoped guard file (`/tmp/forge-surface-shown-$PPID`) prevents repeat firing. Skill filtering (case match on `tool_input.skill`) ensures it only fires for journals skills.
+`PostToolUse.sh` is a one-shot hook: on the first forge-journals skill invocation per session, it runs the `surface` binary and returns `{"hookSpecificOutput":{"additionalContext":"..."}}` for AI context injection with a configurable prompt. A PPID-scoped guard file (`/tmp/forge-surface-shown-$PPID`) prevents repeat firing. Skill filtering (case match on `tool_input.skill`) ensures it only fires for journals skills.
 
 ### Hook Contract
 
