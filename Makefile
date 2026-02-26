@@ -1,6 +1,5 @@
 # forge-reflect — build, test, lint, install, verify
 
-SKILLS   = InsightCheck MemoryHarvest MemoryInsights MemoryPromote SessionReflect Surface
 SKILL_SRC = skills
 LIB_DIR  = $(or $(FORGE_LIB),lib)
 
@@ -47,6 +46,13 @@ lint:
 	  find . -name '*.sh' -not -path '*/target/*' -not -path '*/lib/*' | xargs shellcheck -S warning 2>/dev/null || true; \
 	fi
 	@if command -v semgrep >/dev/null 2>&1; then semgrep scan --config=p/owasp-top-ten --metrics=off --quiet . 2>/dev/null || true; fi
+	@if command -v mdschema >/dev/null 2>&1; then \
+	  for schema in $$(find $(SKILL_SRC) -name '.mdschema'); do \
+	    dir=$$(dirname "$$schema"); \
+	    echo "  mdschema ($$dir/.mdschema)"; \
+	    mdschema check "$$dir/*.md" --schema "$$schema"; \
+	  done; \
+	fi
 
 check:
 	@test -f module.yaml && echo "  ok module.yaml" || echo "  MISSING module.yaml"
