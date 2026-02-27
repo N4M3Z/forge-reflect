@@ -10,6 +10,7 @@ pub struct Config {
     // Transcript analysis
     pub insight_marker: String,
     pub insight_skip_marker: String,
+    pub insight_captured_marker: String,
     /// Path fragments for substring matching in transcript `tool_use` entries.
     /// First element is the insights path (used for insight counting).
     pub memory_paths: Vec<String>,
@@ -32,6 +33,7 @@ pub struct Config {
     // Enforcement behaviour — from defaults.yaml, callers use unwrap_or(true).
     pub insight_blocking: Option<bool>,
     pub reflect_blocking: Option<bool>,
+    pub precompact_agent: Option<bool>,
 
     // Hook message strings
     pub fallback_reason: String,
@@ -96,6 +98,7 @@ impl Default for Config {
         Self {
             insight_marker: "\u{2605} Insight".to_string(),
             insight_skip_marker: "\u{2606} Insight".to_string(),
+            insight_captured_marker: "\u{2713} Insight".to_string(),
             memory_paths: vec![
                 "Memory/Insights/".to_string(),
                 "Memory/Imperatives/".to_string(),
@@ -113,6 +116,7 @@ impl Default for Config {
             user_msg_floor: 2,
             insight_blocking: Some(true),
             reflect_blocking: Some(true),
+            precompact_agent: Some(false),
             reflection: "Orchestration/Skills/SessionReflect/SKILL.md".to_string(),
             insight_check: "Orchestration/Skills/InsightCheck/SKILL.md".to_string(),
             data_dir_suffix: "Data".to_string(),

@@ -16,6 +16,19 @@ pub struct TranscriptAnalysis {
     pub session_duration_minutes: u64,
     /// Topics explicitly marked as reviewed/skipped via ☆ Insight skip markers.
     pub skipped_topics: Vec<String>,
+    /// Topics explicitly marked as captured via ✓ Insight markers.
+    pub captured_topics: Vec<String>,
+}
+
+impl TranscriptAnalysis {
+    fn reset_insight_tracking(&mut self) {
+        self.insight_count = 0;
+        self.insight_topics.clear();
+        self.insights_write_count = 0;
+        self.insights_written.clear();
+        self.skipped_topics.clear();
+        self.captured_topics.clear();
+    }
 }
 
 /// Analyze transcript for user messages, tool-using turns, memory writes, and insights.
@@ -30,6 +43,7 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
         insights_written: Vec::new(),
         session_duration_minutes: 0,
         skipped_topics: Vec::new(),
+        captured_topics: Vec::new(),
     };
 
     let mut first_timestamp: Option<chrono::DateTime<chrono::FixedOffset>> = None;
@@ -49,6 +63,13 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
         regex::escape(&config.insight_skip_marker)
     ))
     .expect("insight skip marker regex must compile");
+
+    // Matches "✓ Insight: Topic → filename.md" or "✓ Insight: Topic" (no arrow).
+    let captured_re = regex::Regex::new(&format!(
+        r"(?m)^\s*`*\s*{}\s*:?\s*(.*)",
+        regex::escape(&config.insight_captured_marker)
+    ))
+    .expect("insight captured marker regex must compile");
 
     for line in transcript.lines() {
         let entry: Value = match serde_json::from_str(line) {
@@ -70,11 +91,7 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
             // Reset insight tracking on compaction boundary — insights from
             // the previous session were already reviewed/captured there.
             if is_compaction_boundary(&entry) {
-                analysis.insight_count = 0;
-                analysis.insight_topics.clear();
-                analysis.insights_write_count = 0;
-                analysis.insights_written.clear();
-                analysis.skipped_topics.clear();
+                analysis.reset_insight_tracking();
             }
             continue;
         }
@@ -88,7 +105,7 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
         if let Some(content) = assistant_content(&entry) {
             for item in content {
                 if let Some(text) = extract_text(item) {
-                    scan_text_markers(text, &insight_re, &skip_re, &mut analysis);
+                    scan_text_markers(text, &insight_re, &skip_re, &captured_re, &mut analysis);
                 }
 
                 if !is_tool_use_item(item) {
@@ -106,11 +123,7 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
                 if tool_name == "Skill" {
                     if let Some(skill) = extract_skill_name(item) {
                         if skill == "SessionReflect" {
-                            analysis.insight_count = 0;
-                            analysis.insight_topics.clear();
-                            analysis.insights_write_count = 0;
-                            analysis.insights_written.clear();
-                            analysis.skipped_topics.clear();
+                            analysis.reset_insight_tracking();
                         }
                     }
                 }
@@ -149,11 +162,12 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
     analysis
 }
 
-/// Scan a text block for ★ Insight markers and ☆ Insight skip markers.
+/// Scan a text block for ★ Insight, ☆ Insight (skip), and ✓ Insight (captured) markers.
 fn scan_text_markers(
     text: &str,
     insight_re: &regex::Regex,
     skip_re: &regex::Regex,
+    captured_re: &regex::Regex,
     analysis: &mut TranscriptAnalysis,
 ) {
     for cap in insight_re.captures_iter(text) {
@@ -174,6 +188,16 @@ fn scan_text_markers(
         let topic = cap[1].trim().trim_end_matches('`').trim();
         if !topic.is_empty() && !is_decorative(topic) && topic.split_whitespace().count() >= 2 {
             analysis.skipped_topics.push(topic.to_lowercase());
+        }
+    }
+    // Scan for ✓ Insight captured markers (explicitly linked to a written file).
+    // Format: "✓ Insight: Topic Name" or "✓ Insight: Topic Name → filename.md"
+    for cap in captured_re.captures_iter(text) {
+        let raw = cap[1].trim().trim_end_matches('`').trim();
+        // Split on → to extract topic (before arrow) for matching
+        let topic = raw.split('\u{2192}').next().unwrap_or(raw).trim();
+        if !topic.is_empty() && !is_decorative(topic) && topic.split_whitespace().count() >= 2 {
+            analysis.captured_topics.push(topic.to_lowercase());
         }
     }
 }

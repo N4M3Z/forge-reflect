@@ -106,6 +106,26 @@ fn test_duration_threshold_from_yaml() {
 }
 
 #[test]
+fn test_precompact_agent_default() {
+    let config = Config::default();
+    assert_eq!(config.precompact_agent, Some(false));
+}
+
+#[test]
+fn test_precompact_agent_deserialization() {
+    let yaml = "precompact_agent: true\n";
+    let config: Config = serde_yaml::from_str(yaml).unwrap();
+    assert_eq!(config.precompact_agent, Some(true));
+}
+
+#[test]
+fn test_precompact_agent_missing_gives_default() {
+    let yaml = "insight_blocking: true\n";
+    let config: Config = serde_yaml::from_str(yaml).unwrap();
+    assert_eq!(config.precompact_agent, Some(false));
+}
+
+#[test]
 fn test_resolve_user_path() {
     let mut config = Config::default();
     config.user.root = "/home/user/vault".to_string();

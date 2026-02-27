@@ -9,6 +9,7 @@ user:
 # Transcript analysis
 insight_marker: "★ Insight"
 insight_skip_marker: "☆ Insight"
+insight_captured_marker: "✓ Insight"
 memory_paths:
   - "Memory/Insights/"
   - "Memory/Imperatives/"
@@ -28,6 +29,7 @@ user_msg_floor: 2
 # Enforcement behaviour (set to false to disable blocking)
 insight_blocking: true
 reflect_blocking: true
+precompact_agent: false
 
 # Skill file paths (user-root-relative)
 reflection: Orchestration/Skills/SessionReflect/SKILL.md
@@ -80,8 +82,17 @@ skills:
     claude:
         ContextKeeper:
         InsightCheck:
+        MemoryCapture:
         MemoryHarvest:
+        MemoryIdea:
+            template: skills/MemoryIdea/Template.md
+        MemoryImperative:
+            template: skills/MemoryImperative/Template.md
+        MemoryInsight:
+            template: skills/MemoryInsight/Template.md
         MemoryInsights:
+        MemoryInvariant:
+            template: skills/MemoryInvariant/Template.md
         MemoryPromote:
         MemoryReview:
         SessionReflect:
@@ -90,8 +101,17 @@ skills:
     gemini:
         ContextKeeper:
         InsightCheck:
+        MemoryCapture:
         MemoryHarvest:
+        MemoryIdea:
+            template: skills/MemoryIdea/Template.md
+        MemoryImperative:
+            template: skills/MemoryImperative/Template.md
+        MemoryInsight:
+            template: skills/MemoryInsight/Template.md
         MemoryInsights:
+        MemoryInvariant:
+            template: skills/MemoryInvariant/Template.md
         MemoryPromote:
         MemoryReview:
         SessionReflect:
@@ -100,8 +120,17 @@ skills:
     codex:
         ContextKeeper:
         InsightCheck:
+        MemoryCapture:
         MemoryHarvest:
+        MemoryIdea:
+            template: skills/MemoryIdea/Template.md
+        MemoryImperative:
+            template: skills/MemoryImperative/Template.md
+        MemoryInsight:
+            template: skills/MemoryInsight/Template.md
         MemoryInsights:
+        MemoryInvariant:
+            template: skills/MemoryInvariant/Template.md
         MemoryPromote:
         MemoryReview:
         SessionReflect:

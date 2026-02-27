@@ -104,6 +104,12 @@ For adjustments, ask:
 
 This marks the topic as reviewed-and-skipped in the transcript so the Stop hook won't block on it later. Use the exact topic title from the proposal.
 
+**Captured marker**: After writing an insight file, emit a line in your response:
+
+✓ Insight: Topic Name → Filename.md
+
+This explicitly links the `★ Insight` topic to the written file, bypassing fuzzy filename matching. Emit this on its own line immediately after confirming the file was written.
+
 #### Step 3.3: Present ideas
 
 If any ideas were surfaced, present them:

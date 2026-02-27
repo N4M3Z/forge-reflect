@@ -3,6 +3,7 @@ use forge_reflect::prompt;
 use forge_reflect::transcript;
 use std::fmt::Write;
 use std::fs;
+use std::io::Write as IoWrite;
 use std::process::ExitCode;
 
 /// Hook contract: exit 0 always. Block/allow is communicated via JSON on stdout.
@@ -25,39 +26,7 @@ fn main() -> ExitCode {
     // PreCompact: inject reflection prompt with reusability filter + uncaptured topics.
     // Runs everywhere (no directory scope check).
     if input.trigger.is_some() {
-        // Load reflection skill (includes reusability filter section)
-        let skill_path = config.resolve_user_path(&cwd, &config.reflection);
-        let reason =
-            prompt::load_pattern_abs(&skill_path).unwrap_or_else(|| config.fallback_reason.clone());
-
-        // Read transcript + compute uncaptured topics (graceful fallback)
-        let mut topics_section = String::new();
-        if !input.transcript_path.is_empty() {
-            if let Ok(transcript) = fs::read_to_string(&input.transcript_path) {
-                let analysis = transcript::analyze_transcript(&transcript, &config);
-                let uncaptured = compute_uncaptured_topics(&analysis);
-                if !uncaptured.is_empty() {
-                    let capped: Vec<_> = uncaptured.iter().take(5).copied().collect();
-                    let _ = write!(
-                        topics_section,
-                        "\n\nUncaptured topics from this session: {}.",
-                        capped.join(", ")
-                    );
-                }
-                eprintln!(
-                    "forge-reflect[reflect]: precompact - {} msgs, {} tool turns, {} min, {} uncaptured",
-                    analysis.user_messages,
-                    analysis.tool_using_turns,
-                    analysis.session_duration_minutes,
-                    uncaptured.len()
-                );
-            }
-        }
-
-        let output = serde_json::json!({
-            "additionalContext": format!("{}{reason}{topics_section}", config.precompact_prefix)
-        });
-        println!("{output}");
+        handle_precompact(&config, &cwd, &input.transcript_path);
         return ExitCode::SUCCESS;
     }
 
@@ -121,6 +90,86 @@ fn main() -> ExitCode {
     }
 
     ExitCode::SUCCESS
+}
+
+fn handle_precompact(config: &Config, cwd: &str, transcript_path: &str) {
+    let skill_path = config.resolve_user_path(cwd, &config.reflection);
+    let reason =
+        prompt::load_pattern_abs(&skill_path).unwrap_or_else(|| config.fallback_reason.clone());
+
+    let mut topics_section = String::new();
+    let mut agent_section = String::new();
+    if !transcript_path.is_empty() {
+        if let Ok(transcript) = fs::read_to_string(transcript_path) {
+            let analysis = transcript::analyze_transcript(&transcript, config);
+            let uncaptured = compute_uncaptured_topics(&analysis);
+            if !uncaptured.is_empty() {
+                let capped: Vec<_> = uncaptured.iter().take(5).copied().collect();
+                let _ = write!(
+                    topics_section,
+                    "\n\nUncaptured topics from this session: {}.",
+                    capped.join(", ")
+                );
+
+                if config.precompact_agent.unwrap_or(false) {
+                    if let Some(path) =
+                        write_candidates_file(&uncaptured, config, cwd, &analysis)
+                    {
+                        let _ = write!(
+                            agent_section,
+                            "\n\nInvoke /MemoryCapture now. Candidates file at {path}."
+                        );
+                    }
+                }
+            }
+            eprintln!(
+                "forge-reflect[reflect]: precompact - {} msgs, {} tool turns, {} min, {} uncaptured",
+                analysis.user_messages,
+                analysis.tool_using_turns,
+                analysis.session_duration_minutes,
+                uncaptured.len()
+            );
+        }
+    }
+
+    let output = serde_json::json!({
+        "additionalContext": format!(
+            "{}{reason}{topics_section}{agent_section}",
+            config.precompact_prefix
+        )
+    });
+    println!("{output}");
+}
+
+fn session_id() -> String {
+    std::env::var("SESSION_ID")
+        .or_else(|_| std::env::var("PPID"))
+        .unwrap_or_else(|_| std::process::id().to_string())
+}
+
+fn write_candidates_file(
+    uncaptured: &[&str],
+    config: &Config,
+    cwd: &str,
+    analysis: &transcript::TranscriptAnalysis,
+) -> Option<String> {
+    let id = session_id();
+    let path = format!("/tmp/forge-precompact-candidates-{id}.json");
+    let json = serde_json::json!({
+        "session_id": id,
+        "user_messages": analysis.user_messages,
+        "tool_turns": analysis.tool_using_turns,
+        "duration_minutes": analysis.session_duration_minutes,
+        "insights_dir": config.resolve_user_path(cwd, &config.memory.insights).to_string_lossy(),
+        "imperatives_dir": config.resolve_user_path(cwd, &config.memory.imperatives).to_string_lossy(),
+        "ideas_dir": config.resolve_user_path(cwd, &config.memory.ideas).to_string_lossy(),
+        "topics": uncaptured,
+    });
+    let mut file = fs::File::create(&path).ok()?;
+    serde_json::to_writer_pretty(&mut file, &json).ok()?;
+    let _ = writeln!(file);
+    eprintln!("forge-reflect[reflect]: wrote candidates to {path}");
+    Some(path)
 }
 
 /// Compute insight topics that were mentioned but not written to files.

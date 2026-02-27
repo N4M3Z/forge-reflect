@@ -121,7 +121,12 @@ fn main() -> ExitCode {
             .skipped_topics
             .iter()
             .any(|s| transcript::topic_matches_filename(&topic_lower, s));
-        if !captured && !skipped {
+        // Check if explicitly captured via ✓ Insight marker
+        let explicitly_captured = analysis
+            .captured_topics
+            .iter()
+            .any(|c| transcript::topic_matches_filename(&topic_lower, c));
+        if !captured && !skipped && !explicitly_captured {
             uncaptured_topics.push(topic.as_str());
         }
     }

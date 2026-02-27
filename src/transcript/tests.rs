@@ -659,6 +659,54 @@ fn test_compaction_boundary_preserves_post_compaction_insights() {
     assert_eq!(analysis.insight_topics, vec!["New Finding"]);
 }
 
+// ─── Captured marker (✓ Insight) ───
+
+#[test]
+fn test_captured_marker_extracts_topic() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: Session boundary awareness"),
+        make_assistant_text(
+            "\u{2713} Insight: Session boundary awareness \u{2192} Transcript scanners need session boundary awareness.md",
+        ),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.captured_topics, vec!["session boundary awareness"]);
+}
+
+#[test]
+fn test_captured_marker_without_arrow() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: forge module alignment"),
+        make_assistant_text("\u{2713} Insight: forge module alignment"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.captured_topics, vec!["forge module alignment"]);
+}
+
+#[test]
+fn test_captured_marker_resets_with_session_reflect() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2713} Insight: Old captured topic"),
+        make_skill_invoke("SessionReflect"),
+        make_assistant_text("\u{2605} Insight: New uncaptured topic"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert!(analysis.captured_topics.is_empty());
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.insight_topics, vec!["New uncaptured topic"]);
+}
+
 #[test]
 fn test_session_reflect_preserves_session_wide_counters() {
     let transcript = [
