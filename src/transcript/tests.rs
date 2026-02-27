@@ -601,6 +601,65 @@ fn test_session_reflect_resets_writes_and_skips() {
 }
 
 #[test]
+fn test_compaction_boundary_resets_insight_tracking() {
+    let compaction_msg = serde_json::json!({
+        "type": "human",
+        "message": {
+            "content": [{
+                "type": "text",
+                "text": "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation."
+            }]
+        }
+    })
+    .to_string();
+
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: Old Session Finding"),
+        make_assistant_write("Memory/Insights/Old Session Finding.md"),
+        compaction_msg,
+        make_human(),
+        make_assistant_text("New session work, no insights here"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    // Pre-compaction insight and write both wiped
+    assert_eq!(analysis.insight_count, 0);
+    assert!(analysis.insight_topics.is_empty());
+    assert_eq!(analysis.insights_write_count, 0);
+    assert!(analysis.insights_written.is_empty());
+}
+
+#[test]
+fn test_compaction_boundary_preserves_post_compaction_insights() {
+    let compaction_msg = serde_json::json!({
+        "type": "human",
+        "message": {
+            "content": [{
+                "type": "text",
+                "text": "This session is being continued from a previous conversation that ran out of context."
+            }]
+        }
+    })
+    .to_string();
+
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: Old Finding"),
+        compaction_msg,
+        make_human(),
+        make_assistant_text("\u{2605} Insight: New Finding"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    // Only post-compaction insight survives
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.insight_topics, vec!["New Finding"]);
+}
+
+#[test]
 fn test_session_reflect_preserves_session_wide_counters() {
     let transcript = [
         make_human(),

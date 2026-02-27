@@ -67,6 +67,15 @@ pub fn analyze_transcript(transcript: &str, config: &Config) -> TranscriptAnalys
 
         if is_user_entry(&entry) {
             analysis.user_messages += 1;
+            // Reset insight tracking on compaction boundary — insights from
+            // the previous session were already reviewed/captured there.
+            if is_compaction_boundary(&entry) {
+                analysis.insight_count = 0;
+                analysis.insight_topics.clear();
+                analysis.insights_write_count = 0;
+                analysis.insights_written.clear();
+                analysis.skipped_topics.clear();
+            }
             continue;
         }
 
@@ -167,6 +176,28 @@ fn scan_text_markers(
             analysis.skipped_topics.push(topic.to_lowercase());
         }
     }
+}
+
+/// Detect session continuation after context compaction.
+/// Claude Code injects a user message with the compaction summary when resuming.
+fn is_compaction_boundary(entry: &Value) -> bool {
+    let candidates = [
+        entry
+            .get("message")
+            .and_then(|m| m.get("content"))
+            .and_then(Value::as_array),
+        entry.get("content").and_then(Value::as_array),
+    ];
+    for arr in candidates.into_iter().flatten() {
+        for item in arr {
+            if let Some(text) = item.get("text").and_then(Value::as_str) {
+                if text.contains("continued from a previous conversation") {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 fn is_user_entry(entry: &Value) -> bool {
