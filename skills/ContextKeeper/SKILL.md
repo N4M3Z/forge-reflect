@@ -107,6 +107,23 @@ The `c0ntextkeeper` CLI (installed at `/opt/homebrew/bin/c0ntextkeeper`) handles
 | `c0ntextkeeper context test` | Test context loading |
 | `c0ntextkeeper context configure` | Configure auto-load settings |
 
+## Context Budget
+
+Use `/context` to measure current session token usage — gives an accurate per-category breakdown:
+
+| Category | Typical cost | Controllable? |
+|----------|-------------|---------------|
+| System tools | ~21K tokens | No |
+| System prompt | ~3.7K tokens | No |
+| Memory files | ~6.3K tokens | Yes (trim CLAUDE.md, MEMORY.md) |
+| Skills | ~3.7K tokens | Yes (reduce installed skills) |
+| Agents | ~1K tokens | Yes (reduce agent count) |
+| MCP tools | ~600 tokens | Yes (disable MCPs) |
+
+Always use `/context` before manual byte counting — tokenization ratios vary and manual estimates are unreliable.
+
+Reading files inside module directories triggers that module's CLAUDE.md injection as a system-reminder. This is per-read, not per-session — avoid unnecessary reads into module directories.
+
 ## Constraints
 
 - Always prefer MCP tools over CLI for in-session retrieval

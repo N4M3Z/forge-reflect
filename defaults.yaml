@@ -8,6 +8,7 @@ user:
 
 # Transcript analysis
 insight_marker: "★ Insight"
+insight_skip_marker: "☆ Insight"
 memory_paths:
   - "Memory/Insights/"
   - "Memory/Imperatives/"
@@ -21,8 +22,12 @@ write_tool_names:
 # Substantiality thresholds
 tool_turn_threshold: 10
 user_msg_threshold: 4
-duration_threshold_minutes: 15
+duration_threshold_minutes: 20
 user_msg_floor: 2
+
+# Enforcement behaviour (set to false to disable blocking)
+insight_blocking: true
+reflect_blocking: true
 
 # Skill file paths (user-root-relative)
 reflection: Orchestration/Skills/SessionReflect/SKILL.md
@@ -43,6 +48,11 @@ precompact_prefix: >-
 uncaptured_insight_reason: >-
   Uncaptured insights detected. Rule 12: every ★ Insight block
   MUST be persisted as a Memory/Insights/ file before ending.
+
+insight_advisory_prompt: >-
+  STOP current work. This session has {count} uncaptured ★ Insight(s):
+  {topics}. These MUST be persisted as Memory/Insights/ files NOW
+  using the Write tool. Create the insight files, then resume your previous task.
 
 # Vault topology paths
 memory:

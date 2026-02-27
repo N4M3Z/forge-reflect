@@ -1,12 +1,12 @@
 ---
 name: MemoryReview
-description: Review and maintain memory files — one-by-one migration, archive review, quality cleanup, and promotion candidate scanning. USE WHEN reviewing accumulated memory, migrating memory schema, reviewing archived memories, finding promotion candidates.
-argument-hint: "[archive|migrate|scan] [insights|imperatives|ideas]"
+description: Review and maintain memory files — one-by-one migration, archive review, quality cleanup, rules extraction, and promotion candidate scanning. USE WHEN reviewing accumulated memory, migrating memory schema, reviewing archived memories, finding promotion candidates, cleaning up auto-memory, extracting rules.
+argument-hint: "[archive|cleanup|migrate|scan] [insights|imperatives|ideas]"
 ---
 
 # Memory Review
 
-Quality maintenance for the memory system. Three modes: **scan** for promotion candidates, **archive** review for archived items, and **migrate** for one-by-one schema + content review of active items.
+Quality maintenance for the memory system. Four modes: **cleanup** for auto-memory hygiene, **scan** for promotion candidates, **archive** review for archived items, and **migrate** for one-by-one schema + content review of active items.
 
 ## Instructions
 
@@ -22,6 +22,83 @@ Store memory paths (user-root-relative, resolve via `FORGE_USER_ROOT`):
 - `promote: archive:` — archive root
 
 Route to the appropriate mode based on the user's request.
+
+---
+
+## Cleanup
+
+Extract rules from auto-memory, delete garbage, leave only genuine learnings.
+
+### Step 1: Inventory
+
+Read all files in the auto-memory directory:
+```bash
+ls ~/.claude/projects/*/memory/*.md 2>/dev/null
+```
+
+Also read:
+- `~/.claude/CLAUDE.md` and any `@`-referenced files (global rules)
+- All existing module rules: `Modules/*/rules/*.md`
+- The project CLAUDE.md
+
+### Step 2: Classify
+
+For each section in MEMORY.md and each topic file, classify as one of:
+
+| Classification | Criteria | Action |
+|---------------|----------|--------|
+| **Rule** | Behavioral directive — "always do X", "never do Y", tool usage conventions | Extract to `Modules/<owner>/rules/` |
+| **Learning** | Genuine gotcha discovered through debugging, not obvious from docs | Keep in MEMORY.md |
+| **Stale** | One-time fix, outdated info, content now in module CLAUDE.md or rules | Delete |
+| **Duplicate** | Already covered by an existing rule, CLAUDE.md, or module docs | Delete |
+| **Module-specific** | Architecture knowledge about a specific module | Belongs in that module's CLAUDE.md, not auto-memory — delete |
+
+### Step 3: Present
+
+Show the full inventory with proposed classification. Present via AskUserQuestion in batches of up to 4:
+- Item title/summary and current location
+- Proposed classification and target (module for rules, keep, or delete)
+- Options: "Extract as rule", "Keep", "Delete", "Move elsewhere"
+
+### Step 4: Execute
+
+For each approved extraction:
+1. Create `Modules/<owner>/rules/<PascalCase>.md`
+   - No `paths:` frontmatter unless the rule genuinely applies only to specific file types
+   - Content: concise behavioral directives, not explanations
+2. Remove the content from MEMORY.md
+3. Delete empty topic files
+
+For global rules (apply to ALL repos, not just this project):
+- Create in `~/.claude/<PascalCase>.md` and link via `@` from `~/.claude/CLAUDE.md`
+
+### Step 5: Install and verify
+
+```bash
+make install-rules
+```
+
+Show the final count and list of installed rules.
+
+### Step 6: Summary
+
+Report what changed:
+- Rules created (with module and filename)
+- MEMORY.md line count before/after
+- Topic files deleted
+- Items kept with reason
+
+### Module ownership guide
+
+| Content domain | Target module |
+|---------------|--------------|
+| Shell, git, naming, formatting, known issues | forge-core |
+| Rust, bash scripting, code style | forge-dev |
+| Obsidian vault conventions | forge-obsidian |
+| Agent naming, council orchestration | forge-council |
+| Insight markers, reflection, hooks | forge-reflect |
+| TLP, safe-read, safe-write | forge-tlp |
+| macOS, Calendar, Reminders | forge-apple |
 
 ---
 
@@ -99,6 +176,7 @@ When converting between memory types, update all type-specific fields:
 
 ## Constraints
 
+- **Cleanup**: `~/.claude/projects/*/memory/` and `~/.claude/CLAUDE.md` scope. Creates rules in `Modules/*/rules/`. PascalCase filenames only.
 - **Promotion scan**: `Memory/{Insights,Imperatives,Ideas}/` only. Do not modify files — hand off to `/MemoryPromote`.
 - **Archive review**: `Archives/Memory/<type>/` only. May modify files directly.
 - **Migration**: `Memory/<type>/` one file at a time. Always modifies files.

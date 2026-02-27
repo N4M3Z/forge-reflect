@@ -90,8 +90,8 @@ fn test_counts_insight_markers() {
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
-    // Decorative markers (★ Insight ─) are skipped entirely — not counted.
-    assert_eq!(analysis.insight_count, 0);
+    // Decorative markers (★ Insight ─) — counted, topics extracted via next-line fallback.
+    assert_eq!(analysis.insight_count, 2);
     assert_eq!(analysis.insights_write_count, 0);
     assert_eq!(analysis.user_messages, 2);
 }
@@ -121,8 +121,8 @@ fn test_insight_with_matching_insight_file() {
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
-    // ★ Insight ─ is decorative — not counted as an insight.
-    assert_eq!(analysis.insight_count, 0);
+    // ★ Insight ─ is decorative — next-line fallback extracts topic.
+    assert_eq!(analysis.insight_count, 1);
     assert_eq!(analysis.insights_write_count, 1);
     assert!(analysis.has_memory_write);
 }
@@ -153,9 +153,9 @@ fn test_backtick_wrapped_insight_marker() {
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
-    // Backtick-wrapped decorative border → skipped entirely.
-    assert_eq!(analysis.insight_count, 0);
-    assert!(analysis.insight_topics.is_empty());
+    // Backtick-wrapped decorative border → next-line fallback extracts the topic.
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.insight_topics, vec!["Something learned"]);
 }
 
 #[test]
@@ -359,9 +359,9 @@ fn test_decorative_border_not_extracted_as_topic() {
     .join("\n");
 
     let analysis = analyze_transcript(&transcript, &cfg());
-    // Decorative border → skipped entirely, not counted at all.
-    assert_eq!(analysis.insight_count, 0);
-    assert!(analysis.insight_topics.is_empty());
+    // Decorative border on same line → next-line fallback extracts "Actual content".
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.insight_topics, vec!["Actual content"]);
 }
 
 #[test]
@@ -386,6 +386,26 @@ fn test_is_decorative() {
     assert!(!is_decorative("Real topic"));
     assert!(!is_decorative("\u{2500} mixed text"));
     assert!(!is_decorative(""));
+}
+
+#[test]
+fn test_decorative_insight_counted_but_no_topic() {
+    // Full backtick-boxed format from explanatory output style.
+    // The insight IS counted (insight_count incremented) but no topic is extracted.
+    let transcript = [
+        make_human(),
+        make_assistant_text(
+            "`\u{2605} Insight \u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}`\n\
+             Key educational point here\n\
+             `\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}\u{2500}`",
+        ),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    assert_eq!(analysis.insight_count, 1);
+    // Next-line fallback extracts the topic from the line after the decorative border.
+    assert_eq!(analysis.insight_topics, vec!["Key educational point here"]);
 }
 
 // ─── Topic-to-filename matching ───
@@ -524,4 +544,77 @@ fn test_session_duration_ignores_bad_timestamps() {
 
     let analysis = analyze_transcript(&transcript, &cfg());
     assert_eq!(analysis.session_duration_minutes, 45);
+}
+
+// ─── SessionReflect insight reset ───
+
+fn make_skill_invoke(skill: &str) -> String {
+    serde_json::json!({
+        "type": "assistant",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "Skill",
+                    "input": { "skill": skill }
+                }
+            ]
+        }
+    })
+    .to_string()
+}
+
+#[test]
+fn test_session_reflect_resets_insight_tracking() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: Pre-reflection Topic"),
+        make_skill_invoke("SessionReflect"),
+        make_assistant_text("\u{2605} Insight: Post-reflection Topic"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    // Pre-reflection insight wiped — only post-reflection counted
+    assert_eq!(analysis.insight_count, 1);
+    assert_eq!(analysis.insight_topics, vec!["Post-reflection Topic"]);
+}
+
+#[test]
+fn test_session_reflect_resets_writes_and_skips() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: Old Topic"),
+        make_assistant_write("Memory/Insights/Old Topic.md"),
+        make_assistant_text("\u{2606} Insight: Skipped Thing"),
+        make_skill_invoke("SessionReflect"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    // Everything reset — nothing to check
+    assert_eq!(analysis.insight_count, 0);
+    assert!(analysis.insight_topics.is_empty());
+    assert_eq!(analysis.insights_write_count, 0);
+    assert!(analysis.insights_written.is_empty());
+    assert!(analysis.skipped_topics.is_empty());
+}
+
+#[test]
+fn test_session_reflect_preserves_session_wide_counters() {
+    let transcript = [
+        make_human(),
+        make_assistant_text("\u{2605} Insight: Pre Topic"),
+        make_assistant_write("Memory/Imperatives/Some Rule.md"),
+        make_skill_invoke("SessionReflect"),
+        make_human(),
+        make_assistant_text("Continuing work"),
+    ]
+    .join("\n");
+
+    let analysis = analyze_transcript(&transcript, &cfg());
+    // Session-wide counters preserved
+    assert_eq!(analysis.user_messages, 2);
+    assert_eq!(analysis.tool_using_turns, 2);
+    assert!(analysis.has_memory_write);
 }

@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 pub struct Config {
     // Transcript analysis
     pub insight_marker: String,
+    pub insight_skip_marker: String,
     /// Path fragments for substring matching in transcript `tool_use` entries.
     /// First element is the insights path (used for insight counting).
     pub memory_paths: Vec<String>,
@@ -28,10 +29,15 @@ pub struct Config {
     // Data directory suffix for scope check
     pub data_dir_suffix: String,
 
+    // Enforcement behaviour — from defaults.yaml, callers use unwrap_or(true).
+    pub insight_blocking: Option<bool>,
+    pub reflect_blocking: Option<bool>,
+
     // Hook message strings
     pub fallback_reason: String,
     pub precompact_prefix: String,
     pub uncaptured_insight_reason: String,
+    pub insight_advisory_prompt: String,
 
     // Nested groups
     pub memory: MemoryConfig,
@@ -89,6 +95,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             insight_marker: "\u{2605} Insight".to_string(),
+            insight_skip_marker: "\u{2606} Insight".to_string(),
             memory_paths: vec![
                 "Memory/Insights/".to_string(),
                 "Memory/Imperatives/".to_string(),
@@ -104,19 +111,29 @@ impl Default for Config {
             user_msg_threshold: 4,
             duration_threshold_minutes: 15,
             user_msg_floor: 2,
+            insight_blocking: Some(true),
+            reflect_blocking: Some(true),
             reflection: "Orchestration/Skills/SessionReflect/SKILL.md".to_string(),
             insight_check: "Orchestration/Skills/InsightCheck/SKILL.md".to_string(),
             data_dir_suffix: "Data".to_string(),
             fallback_reason: "Substantial session with no insights captured. Create a file in \
                 Memory/Insights/ or Memory/Imperatives/ before ending."
                 .to_string(),
-            precompact_prefix:
-                "BEFORE COMPACTING - apply the reusability filter below to each insight. \
-                Capture reusable patterns as Memory/Insights/ files, let one-off traces compact away. "
-                    .to_string(),
+            precompact_prefix: "STOP \u{2014} BEFORE COMPACTING, check for uncaptured insights. \
+                Any \u{2605} Insight block in this session that does NOT have a corresponding \
+                Memory/Insights/ file MUST be persisted NOW using the Write tool. \
+                Do not compact until all insights are captured. \
+                Apply the reusability filter below: capture reusable patterns, \
+                let one-off traces compact away."
+                .to_string(),
             uncaptured_insight_reason:
                 "Uncaptured insights detected. Rule 12: every \u{2605} Insight block \
                 MUST be persisted as a Memory/Insights/ file before ending."
+                    .to_string(),
+            insight_advisory_prompt:
+                "STOP current work. This session has {count} uncaptured \u{2605} Insight(s): \
+                {topics}. These MUST be persisted as Memory/Insights/ files NOW \
+                using the Write tool. Create the insight files, then resume your previous task."
                     .to_string(),
             memory: MemoryConfig::default(),
             journal: JournalConfig::default(),

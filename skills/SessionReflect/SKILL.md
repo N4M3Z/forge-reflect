@@ -98,6 +98,12 @@ For each proposed insight (up to 4 per batch):
 For adjustments, ask:
 - "What's the transferable principle? What should any project learn from this?"
 
+**Skip marker**: When the user chooses "Skip" for an insight, emit a line in your response:
+
+☆ Insight: Topic Name
+
+This marks the topic as reviewed-and-skipped in the transcript so the Stop hook won't block on it later. Use the exact topic title from the proposal.
+
 #### Step 3.3: Present ideas
 
 If any ideas were surfaced, present them:

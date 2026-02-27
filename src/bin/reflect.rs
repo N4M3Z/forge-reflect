@@ -99,11 +99,26 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    // Substantial + no memory writes -> warn only (never block)
-    eprintln!(
-        "forge-reflect[reflect]: warn - substantial session ({} min, {} msgs) with no memory writes",
-        analysis.session_duration_minutes, analysis.user_messages
-    );
+    // Substantial + no memory writes -> block (force reflection)
+    if config.reflect_blocking.unwrap_or(true) {
+        eprintln!(
+            "forge-reflect[reflect]: blocking \u{2014} substantial session ({} min, {} msgs) with no memory writes",
+            analysis.session_duration_minutes, analysis.user_messages
+        );
+        let skill_path = config.resolve_user_path(&cwd, &config.reflection);
+        let reason =
+            prompt::load_pattern_abs(&skill_path).unwrap_or_else(|| config.fallback_reason.clone());
+        let output = serde_json::json!({
+            "decision": "block",
+            "reason": reason
+        });
+        println!("{output}");
+    } else {
+        eprintln!(
+            "forge-reflect[reflect]: warn \u{2014} substantial session ({} min, {} msgs) with no memory writes",
+            analysis.session_duration_minutes, analysis.user_messages
+        );
+    }
 
     ExitCode::SUCCESS
 }
